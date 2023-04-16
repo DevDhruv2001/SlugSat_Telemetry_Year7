@@ -16,6 +16,7 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
+
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usb_device.h"
@@ -23,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "usbd_cdc_if.h"
+#include "CC1200.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -32,6 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -41,7 +44,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
-
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -53,8 +55,10 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI1_Init(void);
-/* USER CODE BEGIN PFP */
 
+/* USER CODE BEGIN PFP */
+uint8_t CC1200_Write_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Address, uint8_t Register_Value);
+uint8_t CC1200_Read_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Address);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -71,66 +75,132 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
+	/* USER CODE BEGIN 1 */
 
-  /* USER CODE END 1 */
+	/* USER CODE END 1 */
 
-  /* MCU Configuration--------------------------------------------------------*/
+	/* MCU Configuration--------------------------------------------------------*/
 
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-  HAL_Init();
+	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+	HAL_Init();
 
-  /* USER CODE BEGIN Init */
-	//uint8_t TEST_PACKET = 0xAA; // 1010 1010
+	/* USER CODE BEGIN Init */
 
-	// CC1200 Packet Protocol
+	// CC1200 Functions Test
+	uint8_t MCU_Data[2];    // data transmitted to CC1200
+	uint8_t CC1200_Data[2]; // data received from CC1200
+
+	CC1200_t SPI_Info;
+	SPI_Info.MOSI_Data = MCU_Data;
+	SPI_Info.MISO_Data = CC1200_Data;
+	SPI_Info.CS_Port = GPIOB;
+	SPI_Info.CS_Pin = GPIO_PIN_6;
+	SPI_Info.HSPI = &hspi1;
+
+	uint8_t Register_Address = 0x00;
+	//uint8_t Register_Address = 0x2F;
+	uint8_t Register_Value = 0xAA;
+
+	// CC1200 Transmit / Receive Test
 	// Standard FIFO Access : R/W B 1 1 1 1 1 1
 	// Read=1, Write=0
-	// Burst=1,Single=0;
-	uint8_t ADDRESS_BYTE = 0x3F; // 0 0 1 1 1 1 1 1
-	uint8_t DATA_BYTE = 0xAA;    // 1 0 1 0 1 0 1 0
-	uint8_t CC1200_TEST_PACKET[2] = {ADDRESS_BYTE, DATA_BYTE}; // write data to TX FIFO
-	uint8_t CC1200_STATUS_BYTES[2]; // receive status information
+	// Burst=1, Single=0;
+	//uint8_t ADDRESS_BYTE = 0x3F; // 0 0 1 1 1 1 1 1
+	//uint8_t DATA_BYTE = 0xAA;    // 1 0 1 0 1 0 1 0
+	//uint8_t CC1200_TEST_PACKET[2] = {ADDRESS_BYTE, DATA_BYTE}; // write data to TX FIFO
+	//uint8_t CC1200_STATUS_BYTES[2]; // receive status information
 
-  /* USER CODE END Init */
+	/* USER CODE END Init */
 
-  /* Configure the system clock */
-  SystemClock_Config();
+	/* Configure the system clock */
+	SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	/* USER CODE BEGIN SysInit */
 
-  /* USER CODE END SysInit */
+	/* USER CODE END SysInit */
 
-  /* Initialize all configured peripherals */
-  MX_GPIO_Init();
-  MX_USART2_UART_Init();
-  MX_SPI1_Init();
-  MX_USB_DEVICE_Init();
-  /* USER CODE BEGIN 2 */
-	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET); // pull CS high
+	/* Initialize all configured peripherals */
+	MX_GPIO_Init();
+	MX_USART2_UART_Init();
+	MX_SPI1_Init();
+	MX_USB_DEVICE_Init();
 
-  /* USER CODE END 2 */
+	/* USER CODE BEGIN 2 */
+	HAL_GPIO_WritePin(SPI_Info.CS_Port, SPI_Info.CS_Pin, GPIO_PIN_SET); // pull CS high
+	/* USER CODE END 2 */
 
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	/* Infinite loop */
+	/* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		//CDC_Transmit_FS("Hello World\r\n", sizeof("Hello World\r\n"));
+		// Hello World Test
+		//char Message[100];
+		//uint16_t Message_Length;
+		//Message_Length = sprintf(Message, "Hello World!\r\n");
+		//CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+		//CDC_Transmit_FS((uint8_t*) ("Hello World!\r\n"), sizeof("Hello World!\r\n"));
+		//HAL_Delay(1000); // delay 1 sec
 
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+		// CC1200 Functions Test
+		char Message[100];
+		uint16_t Message_Length;
 
-		//HAL_SPI_Transmit(&hspi1, &TEST_PACKET, 1, 100);
+		Message_Length = sprintf(Message, "CC1200 Single Register Read / Write Test\r\n");
+		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+		HAL_Delay(100); // delay 100 ms
 
-		// CC1200 Data Packet Test
-		HAL_SPI_TransmitReceive(&hspi1, CC1200_TEST_PACKET, CC1200_STATUS_BYTES, 2, HAL_MAX_DELAY);
+		CC1200_Write_Single_Register(&SPI_Info, Register_Address, Register_Value);
 
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+		Message_Length = sprintf(Message, "Header: 0X%02X\r\n", MCU_Data[0]);
+		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+		HAL_Delay(100); // delay 100 ms
 
-    /* USER CODE END WHILE */
+		Message_Length = sprintf(Message, "Register Value Transmitted: 0X%02X\r\n", MCU_Data[1]);
+		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+		HAL_Delay(100); // delay 100 ms
 
-    /* USER CODE BEGIN 3 */
+		Message_Length = sprintf(Message, "CC1200 Status: 0X%02X\r\n", CC1200_Data[0]);
+		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+		HAL_Delay(100); // delay 100 ms
+
+		Message_Length = sprintf(Message, "CC1200 Status: 0X%02X\r\n", CC1200_Data[1]);
+		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+		HAL_Delay(100); // delay 100 ms
+
+		CC1200_Read_Single_Register(&SPI_Info, Register_Address);
+
+		Message_Length = sprintf(Message, "Header: 0X%02X\r\n", MCU_Data[0]);
+		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+		HAL_Delay(100); // delay 100 ms
+
+		Message_Length = sprintf(Message, "Placeholder: 0X%02X\r\n", MCU_Data[1]);
+		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+		HAL_Delay(100); // delay 100 ms
+
+		Message_Length = sprintf(Message, "CC1200 Status: 0X%02X\r\n", CC1200_Data[0]);
+		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+		HAL_Delay(100); // delay 100 ms
+
+		Message_Length = sprintf(Message, "Register Value Received: 0X%02X\r\n", CC1200_Data[1]);
+		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+		HAL_Delay(100); // delay 100 ms
+
+		//Register_Address++;
+
+		Message_Length = sprintf(Message, "\r\n");
+		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+		HAL_Delay(500); // delay 500 ms
+
+		// CC1200 Transmit / Receive Test
+		//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+		//HAL_SPI_TransmitReceive(&hspi1, CC1200_TEST_PACKET, CC1200_STATUS_BYTES, 2, HAL_MAX_DELAY);
+		//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+
+	/* USER CODE END WHILE */
+
+	/* USER CODE BEGIN 3 */
 	}
-  /* USER CODE END 3 */
+	/* USER CODE END 3 */
 }
 
 /**

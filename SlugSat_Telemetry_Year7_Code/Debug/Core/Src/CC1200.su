@@ -1,0 +1,3 @@
+../Core/Src/CC1200.c:19:9:CC1200_Write_Single_Register	136	static
+../Core/Src/CC1200.c:56:9:CC1200_Read_Single_Register	136	static
+../Core/Src/CC1200.c:91:6:CC1200_Print	128	static
