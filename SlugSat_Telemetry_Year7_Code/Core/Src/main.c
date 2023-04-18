@@ -20,11 +20,13 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usb_device.h"
+//#include <stdio.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "usbd_cdc_if.h"
 #include "CC1200.h"
+#include "CC1200_Registers.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -57,8 +59,7 @@ static void MX_USART2_UART_Init(void);
 static void MX_SPI1_Init(void);
 
 /* USER CODE BEGIN PFP */
-uint8_t CC1200_Write_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Address, uint8_t Register_Value);
-uint8_t CC1200_Read_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Address);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -86,29 +87,210 @@ int main(void)
 
 	/* USER CODE BEGIN Init */
 
+//	// CC1200 Transmit / Receive Test
+//	// Standard FIFO Access : R/W B 1 1 1 1 1 1
+//	// Read=1, Write=0
+//	// Burst=1, Single=0;
+//	uint8_t ADDRESS_BYTE = 0x3F; // 0 0 1 1 1 1 1 1
+//	uint8_t DATA_BYTE = 0xAA;    // 1 0 1 0 1 0 1 0
+//	uint8_t CC1200_TEST_PACKET[2] = {ADDRESS_BYTE, DATA_BYTE}; // write data to TX FIFO
+//	uint8_t CC1200_STATUS_BYTES[2]; // receive status information
+
 	// CC1200 Functions Test
-	uint8_t MCU_Data[2];    // data transmitted to CC1200
-	uint8_t CC1200_Data[2]; // data received from CC1200
 
-	CC1200_t SPI_Info;
-	SPI_Info.MOSI_Data = MCU_Data;
-	SPI_Info.MISO_Data = CC1200_Data;
-	SPI_Info.CS_Port = GPIOB;
-	SPI_Info.CS_Pin = GPIO_PIN_6;
-	SPI_Info.HSPI = &hspi1;
+	CC1200_t CC1200_SPI_Info;
+	uint8_t CC1200_Data[3]; // data received from CC1200
 
-	uint8_t Register_Address = 0x00;
+	//uint8_t Register_Address = 0x00;
 	//uint8_t Register_Address = 0x2F;
-	uint8_t Register_Value = 0xAA;
+	//uint8_t Register_Value = 0xAA;
 
-	// CC1200 Transmit / Receive Test
-	// Standard FIFO Access : R/W B 1 1 1 1 1 1
-	// Read=1, Write=0
-	// Burst=1, Single=0;
-	//uint8_t ADDRESS_BYTE = 0x3F; // 0 0 1 1 1 1 1 1
-	//uint8_t DATA_BYTE = 0xAA;    // 1 0 1 0 1 0 1 0
-	//uint8_t CC1200_TEST_PACKET[2] = {ADDRESS_BYTE, DATA_BYTE}; // write data to TX FIFO
-	//uint8_t CC1200_STATUS_BYTES[2]; // receive status information
+//	/* array mapping each CC1200 register with a default value */
+//	RegisterSetting_t Preferred_Register_Settings[]=
+//	{
+//	  {CC1200_IOCFG3,              0x06},
+//	  {CC1200_IOCFG2,              0x06},
+//	  {CC1200_IOCFG1,              0x30},
+//	  {CC1200_IOCFG0,              0x3C},
+//	  {CC1200_SYNC3,               0x00},
+//	  {CC1200_SYNC2,               0x00},
+//	  {CC1200_SYNC1,               0xD9},
+//	  {CC1200_SYNC0,               0xCC},
+//	  {CC1200_SYNC_CFG1,           0x47},
+//	  {CC1200_SYNC_CFG0,           0x00},
+//	  {CC1200_DEVIATION_M,         0x06},
+//	  {CC1200_MODCFG_DEV_E,        0x29},
+//	  {CC1200_DCFILT_CFG,          0x4B},
+//	  {CC1200_PREAMBLE_CFG1,       0x14},
+//	  {CC1200_PREAMBLE_CFG0,       0x8A},
+//	  {CC1200_IQIC,                0x6C},
+//	  {CC1200_CHAN_BW,             0x83},
+//	  {CC1200_MDMCFG1,             0x42},
+//	  {CC1200_MDMCFG0,             0x05},
+//	  {CC1200_SYMBOL_RATE2,        0x96},
+//	  {CC1200_SYMBOL_RATE1,        0xF0},
+//	  {CC1200_SYMBOL_RATE0,        0x07},
+//	  {CC1200_AGC_REF,             0x28},
+//	  {CC1200_AGC_CS_THR,          0xF6},
+//	  {CC1200_AGC_GAIN_ADJUST,     0x00},
+//	  {CC1200_AGC_CFG3,            0xB1},
+//	  {CC1200_AGC_CFG2,            0x20},
+//	  {CC1200_AGC_CFG1,            0x12},
+//	  {CC1200_AGC_CFG0,            0x84},
+//	  {CC1200_FIFO_CFG,            0x00},
+//	  {CC1200_DEV_ADDR,            0x00},
+//	  {CC1200_SETTLING_CFG,        0x0B},
+//	  {CC1200_FS_CFG,              0x14},
+//	  {CC1200_WOR_CFG1,            0x08},
+//	  {CC1200_WOR_CFG0,            0x21},
+//	  {CC1200_WOR_EVENT0_MSB,      0x00},
+//	  {CC1200_WOR_EVENT0_LSB,      0x00},
+//	  {CC1200_RXDCM_TIME,          0x00},
+//	  {CC1200_PKT_CFG2,            0x00},
+//	  {CC1200_PKT_CFG1,            0x03},
+//	  {CC1200_PKT_CFG0,            0x20},
+//	  {CC1200_RFEND_CFG1,          0x0F},
+//	  {CC1200_RFEND_CFG0,          0x00},
+//	  {CC1200_PA_CFG1,             0x5F},
+//	  {CC1200_PA_CFG0,             0x56},
+//	  {CC1200_ASK_CFG,             0x0F},
+//	  {CC1200_PKT_LEN,             0xFF},
+//	};
+//
+//	/* array mapping each CC1200 extended register with a default value */
+//	RegisterSetting_t Preferred_Extended_Register_Settings[]=
+//	{
+//	  {CC1200_IF_MIX_CFG,          0x1C},
+//	  {CC1200_FREQOFF_CFG,         0x20},
+//	  {CC1200_TOC_CFG,             0x03},
+//	  {CC1200_MARC_SPARE,          0x00},
+//	  {CC1200_ECG_CFG,             0x00},
+//	  {CC1200_MDMCFG2,             0x02},
+//	  {CC1200_EXT_CTRL,            0x01},
+//	  {CC1200_RCCAL_FINE,          0x00},
+//	  {CC1200_RCCAL_COURSE,        0x00},
+//	  {CC1200_RCCAL_OFFSET,        0x00},
+//	  {CC1200_FREQOFF1,            0x00},
+//	  {CC1200_FREQOFF0,            0x00},
+//	  {CC1200_FREQ2,               0x57},
+//	  {CC1200_FREQ1,               0x4C},
+//	  {CC1200_FREQ0,               0xCC},
+//	  {CC1200_IF_ADC2,             0x02},
+//	  {CC1200_IF_ADC1,             0xEE},
+//	  {CC1200_IF_ADC0,             0x10},
+//	  {CC1200_FS_DIG1,             0x07},
+//	  {CC1200_FS_DIG0,             0x50},
+//	  {CC1200_FS_CAL3,             0x00},
+//	  {CC1200_FS_CAL2,             0x20},
+//	  {CC1200_FS_CAL1,             0x40},
+//	  {CC1200_FS_CAL0,             0x0E},
+//	  {CC1200_FS_CHP,              0x28},
+//	  {CC1200_FS_DIVTWO,           0x03},
+//	  {CC1200_FS_DSM1,             0x00},
+//	  {CC1200_FS_DSM0,             0x33},
+//	  {CC1200_FS_DVC1,             0xFF},
+//	  {CC1200_FS_DVC0,             0x17},
+//	  {CC1200_FS_LBI,              0x00},
+//	  {CC1200_FS_PFD,              0x00},
+//	  {CC1200_FS_PRE,              0x6E},
+//	  {CC1200_FS_REG_DIV_CML,      0x1C},
+//	  {CC1200_FS_SPARE,            0xAC},
+//	  {CC1200_FS_VCO4,             0x14},
+//	  {CC1200_FS_VCO3,             0x00},
+//	  {CC1200_FS_VCO2,             0x00},
+//	  {CC1200_FS_VCO1,             0x00},
+//	  {CC1200_FS_VCO0,             0xB5},
+//	  {CC1200_GBIAS6,              0x00},
+//	  {CC1200_GBIAS5,              0x02},
+//	  {CC1200_GBIAS4,              0x00},
+//	  {CC1200_GBIAS3,              0x00},
+//	  {CC1200_GBIAS2,              0x10},
+//	  {CC1200_GBIAS1,              0x00},
+//	  {CC1200_GBIAS0,              0x00},
+//	  {CC1200_IFAMP,               0x09},
+//	  {CC1200_LNA,                 0x01},
+//	  {CC1200_RXMIX,               0x01},
+//	  {CC1200_XOSC5,               0x0E},
+//	  {CC1200_XOSC4,               0xA0},
+//	  {CC1200_XOSC3,               0x03},
+//	  {CC1200_XOSC2,               0x04},
+//	  {CC1200_XOSC1,               0x03},
+//	  {CC1200_XOSC0,               0x00},
+//	  {CC1200_ANALOG_SPARE,        0x00},
+//	  {CC1200_PA_CFG3,             0x00},
+//	  {CC1200_WOR_TIME1,           0x00},
+//	  {CC1200_WOR_TIME0,           0x00},
+//	  {CC1200_WOR_CAPTURE1,        0x00},
+//	  {CC1200_WOR_CAPTURE0,        0x00},
+//	  {CC1200_BIST,                0x00},
+//	  {CC1200_DCFILTOFFSET_I1,     0x00},
+//	  {CC1200_DCFILTOFFSET_I0,     0x00},
+//	  {CC1200_DCFILTOFFSET_Q1,     0x00},
+//	  {CC1200_DCFILTOFFSET_Q0,     0x00},
+//	  {CC1200_IQIE_I1,             0x00},
+//	  {CC1200_IQIE_I0,             0x00},
+//	  {CC1200_IQIE_Q1,             0x00},
+//	  {CC1200_IQIE_Q0,             0x00},
+//	  {CC1200_RSSI1,               0x80},
+//	  {CC1200_RSSI0,               0x00},
+//	  {CC1200_MARCSTATE,           0x41},
+//	  {CC1200_LQI_VAL,             0x00},
+//	  {CC1200_PQT_SYNC_ERR,        0xFF},
+//	  {CC1200_DEM_STATUS,          0x00},
+//	  {CC1200_FREQOFF_EST1,        0x00},
+//	  {CC1200_FREQOFF_EST0,        0x00},
+//	  {CC1200_AGC_GAIN3,           0x00},
+//	  {CC1200_AGC_GAIN2,           0xD1},
+//	  {CC1200_AGC_GAIN1,           0x00},
+//	  {CC1200_AGC_GAIN0,           0x3F},
+//	  {CC1200_CFM_RX_DATA_OUT,     0x00},
+//	  {CC1200_CFM_TX_DATA_IN,      0x00},
+//	  {CC1200_ASK_SOFT_RX_DATA,    0x30},
+//	  {CC1200_RNDGEN,              0x7F},
+//	  {CC1200_MAGN2,               0x00},
+//	  {CC1200_MAGN1,               0x00},
+//	  {CC1200_MAGN0,               0x00},
+//	  {CC1200_ANG1,                0x00},
+//	  {CC1200_ANG0,                0x00},
+//	  {CC1200_CHFILT_I2,           0x02},
+//	  {CC1200_CHFILT_I1,           0x00},
+//	  {CC1200_CHFILT_I0,           0x00},
+//	  {CC1200_CHFILT_Q2,           0x00},
+//	  {CC1200_CHFILT_Q1,           0x00},
+//	  {CC1200_CHFILT_Q0,           0x00},
+//	  {CC1200_GPIO_STATUS,         0x00},
+//	  {CC1200_FSCAL_CTRL,          0x01},
+//	  {CC1200_PHASE_ADJUST,        0x00},
+//	  {CC1200_PARTNUMBER,          0x00},
+//	  {CC1200_PARTVERSION,         0x00},
+//	  {CC1200_SERIAL_STATUS,       0x00},
+//	  {CC1200_MODEM_STATUS1,       0x01},
+//	  {CC1200_MODEM_STATUS0,       0x00},
+//	  {CC1200_MARC_STATUS1,        0x00},
+//	  {CC1200_MARC_STATUS0,        0x00},
+//	  {CC1200_PA_IFAMP_TEST,       0x00},
+//	  {CC1200_FSRF_TEST,           0x00},
+//	  {CC1200_PRE_TEST,            0x00},
+//	  {CC1200_PRE_OVR,             0x00},
+//	  {CC1200_ADC_TEST,            0x00},
+//	  {CC1200_DVC_TEST,            0x0B},
+//	  {CC1200_ATEST,               0x40},
+//	  {CC1200_ATEST_LVDS,          0x00},
+//	  {CC1200_ATEST_MODE,          0x00},
+//	  {CC1200_XOSC_TEST1,          0x3C},
+//	  {CC1200_XOSC_TEST0,          0x00},
+//	  {CC1200_AES,                 0x00},
+//	  {CC1200_MDM_TEST,            0x00},
+//	  {CC1200_RXFIRST,             0x00},
+//	  {CC1200_TXFIRST,             0x00},
+//	  {CC1200_RXLAST,              0x00},
+//	  {CC1200_TXLAST,              0x00},
+//	  {CC1200_NUM_TXBYTES,         0x00},
+//	  {CC1200_NUM_RXBYTES,         0x00},
+//	  {CC1200_FIFO_NUM_TXBYTES,    0x0F},
+//	  {CC1200_FIFO_NUM_RXBYTES,    0x00},
+//	  {CC1200_RXFIFO_PRE_BUF,      0x00},
+//	};
 
 	/* USER CODE END Init */
 
@@ -126,75 +308,56 @@ int main(void)
 	MX_USB_DEVICE_Init();
 
 	/* USER CODE BEGIN 2 */
-	HAL_GPIO_WritePin(SPI_Info.CS_Port, SPI_Info.CS_Pin, GPIO_PIN_SET); // pull CS high
+	CC1200_Init(&CC1200_SPI_Info, CC1200_Data, GPIOB, GPIO_PIN_6, &hspi1);
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		// Hello World Test
-		//char Message[100];
-		//uint16_t Message_Length;
-		//Message_Length = sprintf(Message, "Hello World!\r\n");
-		//CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		//CDC_Transmit_FS((uint8_t*) ("Hello World!\r\n"), sizeof("Hello World!\r\n"));
-		//HAL_Delay(1000); // delay 1 sec
+		//printf("Hello World\n");
+		//scanf();
+//		// CC1200 Transmit / Receive Test
+//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+//		HAL_SPI_TransmitReceive(&hspi1, CC1200_TEST_PACKET, CC1200_STATUS_BYTES, 2, HAL_MAX_DELAY);
+//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+
+//		// Chip Select Test
+//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
+//		HAL_Delay(100);
+//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+//		HAL_Delay(100);
+
+//		// Hello World Test
+//		char Message[100];
+//		uint16_t Message_Length;
+//		Message_Length = sprintf(Message, "Hello World!\r\n");
+//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+//		CDC_Transmit_FS((uint8_t*) ("Hello World!\r\n"), sizeof("Hello World!\r\n"));
+//		HAL_Delay(1000); // delay 1 sec
 
 		// CC1200 Functions Test
 		char Message[100];
 		uint16_t Message_Length;
 
-		Message_Length = sprintf(Message, "CC1200 Single Register Read / Write Test\r\n");
+		Message_Length = sprintf(Message, "CC1200 Command Strobe Test\r\n");
 		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
 		HAL_Delay(100); // delay 100 ms
 
-		CC1200_Write_Single_Register(&SPI_Info, Register_Address, Register_Value);
+		CC1200_Command_Strobe(&CC1200_SPI_Info, CC1200_COMMAND_SRES); // reset the chip
 
-		Message_Length = sprintf(Message, "Header: 0X%02X\r\n", MCU_Data[0]);
-		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(100); // delay 100 ms
+		CC1200_Command_Strobe(&CC1200_SPI_Info, CC1200_COMMAND_SRX); // reset the chip
 
-		Message_Length = sprintf(Message, "Register Value Transmitted: 0X%02X\r\n", MCU_Data[1]);
-		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(100); // delay 100 ms
+		CC1200_Command_Strobe(&CC1200_SPI_Info, CC1200_COMMAND_STX); // reset the chip
 
-		Message_Length = sprintf(Message, "CC1200 Status: 0X%02X\r\n", CC1200_Data[0]);
-		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(100); // delay 100 ms
-
-		Message_Length = sprintf(Message, "CC1200 Status: 0X%02X\r\n", CC1200_Data[1]);
-		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(100); // delay 100 ms
-
-		CC1200_Read_Single_Register(&SPI_Info, Register_Address);
-
-		Message_Length = sprintf(Message, "Header: 0X%02X\r\n", MCU_Data[0]);
-		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(100); // delay 100 ms
-
-		Message_Length = sprintf(Message, "Placeholder: 0X%02X\r\n", MCU_Data[1]);
-		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(100); // delay 100 ms
-
-		Message_Length = sprintf(Message, "CC1200 Status: 0X%02X\r\n", CC1200_Data[0]);
-		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(100); // delay 100 ms
-
-		Message_Length = sprintf(Message, "Register Value Received: 0X%02X\r\n", CC1200_Data[1]);
-		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(100); // delay 100 ms
-
-		//Register_Address++;
+		//CC1200_Write_Single_Register();
+		//CC1200_Read_Single_Register();
 
 		Message_Length = sprintf(Message, "\r\n");
 		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(500); // delay 500 ms
+		HAL_Delay(100); // delay 100 ms
 
-		// CC1200 Transmit / Receive Test
-		//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
-		//HAL_SPI_TransmitReceive(&hspi1, CC1200_TEST_PACKET, CC1200_STATUS_BYTES, 2, HAL_MAX_DELAY);
-		//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
+		HAL_Delay(1000); // wait 1 s
 
 	/* USER CODE END WHILE */
 
