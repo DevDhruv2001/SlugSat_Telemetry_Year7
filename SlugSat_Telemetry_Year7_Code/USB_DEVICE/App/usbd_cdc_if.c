@@ -22,7 +22,7 @@
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
-
+extern uint8_t User_Input_Buffer[100];
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,7 +31,6 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -261,6 +260,16 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
   /* USER CODE BEGIN 6 */
   USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
   USBD_CDC_ReceivePacket(&hUsbDeviceFS);
+  //CDC_Transmit_FS(Buf,*Len); // Echo
+
+  // process user input
+  memset(User_Input_Buffer, '\0', 100);          // clear the external buffer
+  memcpy(User_Input_Buffer, Buf, (uint8_t)*Len); // copy the received data from the function buffer to the external buffer
+  memset(Buf, '\0', (uint8_t)*Len);              // clear the function buffer
+
+  /*if (User_Input_Buffer == " ") {
+	  //
+  }*/
 
   return (USBD_OK);
   /* USER CODE END 6 */

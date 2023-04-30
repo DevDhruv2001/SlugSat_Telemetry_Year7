@@ -38,6 +38,7 @@ typedef struct CC1200
  * @param HSPI: SPI handler
  * @retval Success (0) or Error (1)
  */
+// document what register parameters to change
 void CC1200_Init(CC1200_t* SPI_Info, uint8_t* MISO_Data, GPIO_TypeDef* CS_Port, uint16_t CS_Pin, SPI_HandleTypeDef* HSPI);
 
 /**

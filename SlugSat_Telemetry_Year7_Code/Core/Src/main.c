@@ -20,7 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usb_device.h"
-//#include <stdio.h>
+#include <stdio.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -49,7 +49,7 @@ SPI_HandleTypeDef hspi1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
-
+uint8_t User_Input_Buffer[100]; // CDC Receive Buffer
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -86,24 +86,6 @@ int main(void)
 	HAL_Init();
 
 	/* USER CODE BEGIN Init */
-
-//	// CC1200 Transmit / Receive Test
-//	// Standard FIFO Access : R/W B 1 1 1 1 1 1
-//	// Read=1, Write=0
-//	// Burst=1, Single=0;
-//	uint8_t ADDRESS_BYTE = 0x3F; // 0 0 1 1 1 1 1 1
-//	uint8_t DATA_BYTE = 0xAA;    // 1 0 1 0 1 0 1 0
-//	uint8_t CC1200_TEST_PACKET[2] = {ADDRESS_BYTE, DATA_BYTE}; // write data to TX FIFO
-//	uint8_t CC1200_STATUS_BYTES[2]; // receive status information
-
-	// CC1200 Functions Test
-
-	CC1200_t CC1200_SPI_Info;
-	uint8_t CC1200_Data[3]; // data received from CC1200
-
-	//uint8_t Register_Address = 0x00;
-	//uint8_t Register_Address = 0x2F;
-	//uint8_t Register_Value = 0xAA;
 
 //	/* array mapping each CC1200 register with a default value */
 //	RegisterSetting_t Preferred_Register_Settings[]=
@@ -308,25 +290,22 @@ int main(void)
 	MX_USB_DEVICE_Init();
 
 	/* USER CODE BEGIN 2 */
-	CC1200_Init(&CC1200_SPI_Info, CC1200_Data, GPIOB, GPIO_PIN_6, &hspi1);
+	CC1200_t CC1200_SPI_Info; // struct for MISO data, CS Port/Pin, SPI Handler
+	uint8_t CC1200_Data; // MISO data received from CC1200
+	CC1200_Init(&CC1200_SPI_Info, &CC1200_Data, GPIOB, GPIO_PIN_6, &hspi1);
+
+	// CC1200 Functions Test
+	char Message[100];
+	uint16_t Message_Length;
+	Message_Length = sprintf(Message, "CC1200 Functions Test\r\n");
+	CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
+	HAL_Delay(100); // delay 100 ms
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 	while (1)
 	{
-		//printf("Hello World\n");
-		//scanf();
-//		// CC1200 Transmit / Receive Test
-//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
-//		HAL_SPI_TransmitReceive(&hspi1, CC1200_TEST_PACKET, CC1200_STATUS_BYTES, 2, HAL_MAX_DELAY);
-//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
-
-//		// Chip Select Test
-//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
-//		HAL_Delay(100);
-//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);
-//		HAL_Delay(100);
 
 //		// Hello World Test
 //		char Message[100];
@@ -336,28 +315,18 @@ int main(void)
 //		CDC_Transmit_FS((uint8_t*) ("Hello World!\r\n"), sizeof("Hello World!\r\n"));
 //		HAL_Delay(1000); // delay 1 sec
 
-		// CC1200 Functions Test
-		char Message[100];
-		uint16_t Message_Length;
-
-		Message_Length = sprintf(Message, "CC1200 Command Strobe Test\r\n");
-		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(100); // delay 100 ms
-
-		CC1200_Command_Strobe(&CC1200_SPI_Info, CC1200_COMMAND_SRES); // reset the chip
-
-		CC1200_Command_Strobe(&CC1200_SPI_Info, CC1200_COMMAND_SRX); // reset the chip
-
-		CC1200_Command_Strobe(&CC1200_SPI_Info, CC1200_COMMAND_STX); // reset the chip
-
-		//CC1200_Write_Single_Register();
-		//CC1200_Read_Single_Register();
-
-		Message_Length = sprintf(Message, "\r\n");
-		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(100); // delay 100 ms
-
-		HAL_Delay(1000); // wait 1 s
+//	if (Buffer == "Start")
+//	{
+//	  //
+//	}
+//	else if (Buffer == "Begin Transmit")
+//	{
+//	  //
+//	}
+//	else if (Buffer == "Begin Receive")
+//	{
+//	  //
+//	}
 
 	/* USER CODE END WHILE */
 
