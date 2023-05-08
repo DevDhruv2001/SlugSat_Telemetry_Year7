@@ -96,30 +96,12 @@ uint8_t CC1200_Write_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Addres
 	{
 		uint8_t Header_Byte = 0x00 | Register_Address; // 0000 0000 | 0 0 A5 A4 A3 A2 A1 A0
 		//uint8_t MOSI_Data[2] = {Header_Byte, Register_Value};
-		//(SPI_Info -> MOSI_Data)[0] = MOSI_Data[0];
-		//(SPI_Info -> MOSI_Data)[1] = MOSI_Data[1];
 
 		HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_RESET);
 
-		//HAL_Delay(10); // delay 10 ms
 		//HAL_SPI_TransmitReceive(SPI_Info -> HSPI, MOSI_Data, SPI_Info -> MISO_Data, 2, HAL_MAX_DELAY);
-		//HAL_Delay(10); // delay 10 ms
 
 		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Header_Byte, SPI_Info -> MISO_Data, 1, 100);
-//		Message_Length = sprintf(Message, "Header: 0X%02X\r\n", Header_Byte);
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
-//		Message_Length = sprintf(Message, "Status: 0X%02X\r\n", *(SPI_Info -> MISO_Data));
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
-
-		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Register_Value, SPI_Info -> MISO_Data, 1, 100);
-//		Message_Length = sprintf(Message, "Register Value Written: 0X%02X\r\n", Register_Value);
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
-//		Message_Length = sprintf(Message, "Status: 0X%02X\r\n", *(SPI_Info -> MISO_Data));
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 
 		HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_SET);
 
@@ -127,9 +109,6 @@ uint8_t CC1200_Write_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Addres
 	}
 	else
 	{
-//		Message_Length = sprintf(Message, "Invalid Register Access\r\n");
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 		retval = 1;
 	}
 
@@ -154,30 +133,14 @@ uint8_t CC1200_Read_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Address
 		uint8_t Header_Byte = 0x80 | Register_Address; // 1000 0000 | 0 0 A5 A4 A3 A2 A1 A0
 		uint8_t Placeholder = 0x00;
 		//uint8_t MOSI_Data[2] = {Header_Byte, Placeholder};
-		//(SPI_Info -> MOSI_Data)[0] = MOSI_Data[0];
-		//(SPI_Info -> MOSI_Data)[1] = MOSI_Data[1];
 
 		HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_RESET);
 
-		//HAL_Delay(10); // delay 10 ms
 		//HAL_SPI_TransmitReceive(SPI_Info -> HSPI, MOSI_Data, SPI_Info -> MISO_Data, 2, HAL_MAX_DELAY);
-		//HAL_Delay(10); // delay 10 ms
 
 		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Header_Byte, SPI_Info -> MISO_Data, 1, 100);
-//		Message_Length = sprintf(Message, "Header: 0X%02X\r\n", Header_Byte);
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
-//		Message_Length = sprintf(Message, "Status: 0X%02X\r\n", *(SPI_Info -> MISO_Data));
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 
 		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Placeholder, SPI_Info -> MISO_Data, 1, 100);
-//		Message_Length = sprintf(Message, "Placeholder: 0X%02X\r\n", Header_Byte);
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
-//		Message_Length = sprintf(Message, "Register Value Read: 0X%02X\r\n", *(SPI_Info -> MISO_Data));
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 
 		HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_SET);
 
@@ -185,9 +148,6 @@ uint8_t CC1200_Read_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Address
 	}
 	else
 	{
-//		Message_Length = sprintf(Message, "Invalid Register Access\r\n");
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 		retval = 1;
 	}
 	return retval;
@@ -212,46 +172,22 @@ uint8_t CC1200_Write_Single_Extended_Register(CC1200_t* SPI_Info, uint8_t Regist
 	if ((Register_Address >= 0x3A && Register_Address <= 0x63) || (Register_Address >= 0xA3 && Register_Address <= 0xD1) ||
 			(Register_Address >= 0xDB))
 	{
-//		Message_Length = sprintf(Message, "Invalid Register Access\r\n");
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 		retval = 1;
 	}
 	else
 	{
 		uint8_t Header_Byte = 0x00 | 0x2F; // 0000 0000 | 0 0 1 0 1 1 1 1
 		//uint8_t MOSI_Data[3] = {Header_Byte, Register_Address, Register_Value};
-		//(SPI_Info -> MOSI_Data)[0] = MOSI_Data[0];
-		//(SPI_Info -> MOSI_Data)[1] = MOSI_Data[1];
-		//(SPI_Info -> MOSI_Data)[2] = MOSI_Data[2];
 
 		HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_RESET);
 
 		//HAL_SPI_TransmitReceive(SPI_Info -> HSPI, MOSI_Data, SPI_Info -> MISO_Data, 3, HAL_MAX_DELAY);
 
 		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Header_Byte, SPI_Info -> MISO_Data, 1, 100);
-//		Message_Length = sprintf(Message, "Header: 0X%02X\r\n", Header_Byte);
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
-//		Message_Length = sprintf(Message, "Status: 0X%02X\r\n", *(SPI_Info -> MISO_Data));
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 
 		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Register_Address, SPI_Info -> MISO_Data, 1, 100);
-//		Message_Length = sprintf(Message, "Register Address: 0X%02X\r\n", Register_Address);
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
-//		Message_Length = sprintf(Message, "Status: 0X%02X\r\n", *(SPI_Info -> MISO_Data));
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 
 		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Register_Value, SPI_Info -> MISO_Data, 1, 100);
-//		Message_Length = sprintf(Message, "Register Value Written: 0X%02X\r\n", Register_Value);
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
-//		Message_Length = sprintf(Message, "Status: 0X%02X\r\n", *(SPI_Info -> MISO_Data));
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 
 		HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_SET);
 
@@ -278,9 +214,6 @@ uint8_t CC1200_Read_Single_Extended_Register(CC1200_t* SPI_Info, uint8_t Registe
 	if ((Register_Address >= 0x3A && Register_Address <= 0x63) || (Register_Address >= 0xA3 && Register_Address <= 0xD1) ||
 				(Register_Address >= 0xDB))
 	{
-//		Message_Length = sprintf(Message, "Invalid Register Access\r\n");
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 		retval = 1;
 	}
 	else
@@ -297,28 +230,10 @@ uint8_t CC1200_Read_Single_Extended_Register(CC1200_t* SPI_Info, uint8_t Registe
 		//HAL_SPI_TransmitReceive(SPI_Info -> HSPI, MOSI_Data, SPI_Info -> MISO_Data, 3, HAL_MAX_DELAY);
 
 		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Header_Byte, SPI_Info -> MISO_Data, 1, 100);
-//		Message_Length = sprintf(Message, "Header: 0X%02X\r\n", Header_Byte);
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
-//		Message_Length = sprintf(Message, "Status: 0X%02X\r\n", *(SPI_Info -> MISO_Data));
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 
 		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Register_Address, SPI_Info -> MISO_Data, 1, 100);
-//		Message_Length = sprintf(Message, "Register Address: 0X%02X\r\n", Register_Address);
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
-//		Message_Length = sprintf(Message, "Status: 0X%02X\r\n", *(SPI_Info -> MISO_Data));
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 
 		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Placeholder, SPI_Info -> MISO_Data, 1, 100);
-//		Message_Length = sprintf(Message, "Placeholder: 0X%02X\r\n", Placeholder);
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
-//		Message_Length = sprintf(Message, "Register Value Read: 0X%02X\r\n", *(SPI_Info -> MISO_Data));
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 
 		HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_SET);
 
@@ -338,8 +253,8 @@ uint8_t CC1200_Read_Single_Extended_Register(CC1200_t* SPI_Info, uint8_t Registe
 uint8_t CC1200_Command_Strobe(CC1200_t* SPI_Info, uint8_t Register_Address)
 {
 	uint8_t retval;
-	char Message[100];
-	uint16_t Message_Length;
+	//char Message[100];
+	//uint16_t Message_Length;
 
 	if ((Register_Address >= 0x30) && (Register_Address <= 0x3D))
 	{
@@ -349,12 +264,6 @@ uint8_t CC1200_Command_Strobe(CC1200_t* SPI_Info, uint8_t Register_Address)
 		HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_RESET);
 
 		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Header_Byte, SPI_Info -> MISO_Data, 1, 100);
-		Message_Length = sprintf(Message, "Header: 0X%02X\r\n", Header_Byte);
-		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(100); // delay 100 ms
-		Message_Length = sprintf(Message, "Status: 0X%02X\r\n", *(SPI_Info -> MISO_Data));
-		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-		HAL_Delay(100); // delay 100 ms
 
 		HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_SET);
 
@@ -362,9 +271,6 @@ uint8_t CC1200_Command_Strobe(CC1200_t* SPI_Info, uint8_t Register_Address)
 	}
 	else
 	{
-//		Message_Length = sprintf(Message, "Invalid Register Access\r\n");
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length + 1));
-//		HAL_Delay(100); // delay 100 ms
 		retval = 1;
 	}
 	return retval;
@@ -442,7 +348,6 @@ uint8_t CC1200_Receive(CC1200_t* SPI_Info, uint8_t* RX_Packet)
 
 	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SFRX); // flush TX FIFO
 	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SIDLE); // exit RX/TX
-
 
 	return 0;
 }

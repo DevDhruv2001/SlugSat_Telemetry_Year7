@@ -19,10 +19,16 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
+#include "main.h"
 #include "usbd_cdc_if.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
 
 /* USER CODE BEGIN INCLUDE */
-extern uint8_t User_Input_Buffer[100];
+#include "CC1200.h"
+#include "CC1200_Registers.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +37,20 @@ extern uint8_t User_Input_Buffer[100];
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
+#define MAX_RX_BUFFER_SIZE 100 // Maximum size of the receive buffer
+static uint8_t rx_buffer[MAX_RX_BUFFER_SIZE]; // Receive buffer
+static uint32_t rx_buffer_len = 0; // Length of the data in the receive buffer
+
+uint8_t User_Input_Buffer[MAX_RX_BUFFER_SIZE];
+uint8_t User_Input_Buffer_Len;
+
+extern SPI_HandleTypeDef hspi1;
+extern CC1200_t SPI_Info; // structure with MISO data buffer, GPIO CS Port/Pin, and SPI handler
+extern uint8_t MISO_Data[1]; // MISO data buffer
+
+extern RegisterSetting_t Preferred_Register_Settings[];
+extern RegisterSetting_t Preferred_Extended_Register_Settings[];
+
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -123,10 +143,10 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
 static int8_t CDC_Init_FS(void);
 static int8_t CDC_DeInit_FS(void);
 static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length);
-static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
+int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
-
+uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len);
 /* USER CODE END PRIVATE_FUNCTIONS_DECLARATION */
 
 /**
@@ -255,23 +275,39 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   * @param  Len: Number of data received (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
+int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
-  USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
-  USBD_CDC_ReceivePacket(&hUsbDeviceFS);
-  //CDC_Transmit_FS(Buf,*Len); // Echo
+	// Copy the received data to the buffer
+	for (int i = 0; i < *Len; i++)
+	{
+	if (rx_buffer_len < MAX_RX_BUFFER_SIZE)
+	{
+	  rx_buffer[rx_buffer_len] = Buf[i];
+	  rx_buffer_len = rx_buffer_len + 1;
+	}
+	else
+	{
+	  // The receive buffer is full, discard the received data
+	}
+	}
 
-  // process user input
-  memset(User_Input_Buffer, '\0', 100);          // clear the external buffer
-  memcpy(User_Input_Buffer, Buf, (uint8_t)*Len); // copy the received data from the function buffer to the external buffer
-  memset(Buf, '\0', (uint8_t)*Len);              // clear the function buffer
+	// Check if a complete message has been received
+	if (rx_buffer_len > 0 && rx_buffer[rx_buffer_len - 1] == '\n')
+	{
+		// Process the received message
+		memcpy(User_Input_Buffer, rx_buffer, rx_buffer_len);
+		User_Input_Buffer_Len = rx_buffer_len;
+		Process_Received_Message(rx_buffer, rx_buffer_len);
+		// Clear the receive buffer
+		rx_buffer_len = 0;
+	}
 
-  /*if (User_Input_Buffer == " ") {
-	  //
-  }*/
+	// Set up the USB device to receive a new packet
+	USBD_CDC_SetRxBuffer(&hUsbDeviceFS, &Buf[0]);
+	USBD_CDC_ReceivePacket(&hUsbDeviceFS);
 
-  return (USBD_OK);
+	return (USBD_OK);
   /* USER CODE END 6 */
 }
 
@@ -301,7 +337,255 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 }
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
+uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len)
+{
+	char Message[1000];
+	uint16_t Message_Length;
+	char str1[100];
+	char str2[100];
+	char str3[100];
+	char str4[100];
+	char str5[100];
+	char* Token;
+	uint8_t Register_Address;
+	uint8_t Register_Value;
 
+	if(strncmp((char*) rx_buffer, "Start", strlen("Start")) == 0)
+	{
+		sprintf(str1, "User Input: Start\r\n");
+		sprintf(str2, "Initialized the CC1200 for Operation\r\n");
+		CC1200_Init(&SPI_Info, MISO_Data, GPIOB, GPIO_PIN_6, &hspi1);
+		Message_Length = sprintf(Message, "%s%s", str1, str2);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else if (strncmp((char*) rx_buffer, "Configure:", strlen("Configure:")) == 0)
+	{
+		sprintf(str1, "User Input: Configure\r\n");
+		Token = strtok((char*) rx_buffer, " "); // first token "Configure:"
+		Token = strtok(NULL, "\r\n"); // second token "[mode]"
+		if (strncmp(Token, "Default", strlen("Default")) == 0)
+		{
+			sprintf(str2, "Configured the CC1200 with Default Register Settings\r\n");
+			CC1200_Configure(&SPI_Info, Preferred_Register_Settings, Preferred_Extended_Register_Settings);
+		}
+		else
+		{
+			sprintf(str2, "Invalid Mode: %s\r\n", Token);
+		}
+		Message_Length = sprintf(Message, "%s%s", str1, str2);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else if (strncmp((char*) rx_buffer, "Transmit:", strlen("Transmit:")) == 0)
+	{
+		sprintf(str1, "User Input: Transmit\r\n");
+		sprintf(str2, "Set the CC1200 into Transmit Mode\r\n");
+		sprintf(str3, "Transmitted the Following Message: ");
+		Token = strtok((char*) rx_buffer, " "); // first token "Transmit:"
+		Token = strtok(NULL, "\r\n"); // second token "[message to send]"
+		sprintf(str4, "%s\r\n", Token);
+		Message_Length = sprintf(Message, "%s%s%s%s", str1, str2, str3, str4);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else if (strncmp((char*) rx_buffer, "Receive", strlen("Receive")) == 0)
+	{
+		sprintf(str1, "User Input: Receive\r\n");
+		sprintf(str2, "Set the CC1200 into Receive Mode\r\n");
+		sprintf(str3, "Received the Following Message: \r\n");
+		Message_Length = sprintf(Message, "%s%s%s", str1, str2, str3);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else if (strncmp((char*) rx_buffer, "Command:", strlen("Command:")) == 0)
+	{
+		sprintf(str1, "User Input: Command\r\n");
+		sprintf(str2, "Issued the Following Command: ");
+		Token = strtok((char*) rx_buffer, " "); // first token "Command:"
+		Token = strtok(NULL, "\r\n"); // second token "[command strobe]"
+		sprintf(str3, "%s\r\n", Token);
+		Register_Address = strtol(Token, NULL, 16); // convert register address to a number
+		CC1200_Command_Strobe(&SPI_Info, Register_Address);
+		Message_Length = sprintf(Message, "%s%s%s%s", str1, str2, str3, str4);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else if (strncmp((char*) rx_buffer, "Exit", strlen("Exit")) == 0)
+	{
+		sprintf(str1, "User Input: Exit\r\n");
+		sprintf(str2, "Set the CC1200 into IDLE Mode\r\n");
+		sprintf(str3, "Register Values Can Be Changed\r\n");
+		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SIDLE);
+		Message_Length = sprintf(Message, "%s%s%s", str1, str2, str3);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else if (strncmp((char*) rx_buffer, "Reset", strlen("Reset")) == 0)
+	{
+		sprintf(str1, "User Input: Reset\r\n");
+		sprintf(str2, "Set the CC1200 into IDLE Mode\r\n");
+		sprintf(str3, "Register Values Reset to Default Values\r\n");
+		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SRES);
+		Message_Length = sprintf(Message, "%s%s%s", str1, str2, str3);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else if (strncmp((char*) rx_buffer, "Write Register:", strlen("Write Register:")) == 0)
+	{
+		sprintf(str1, "User Input: Write Register\r\n");
+		Token = strtok((char*) rx_buffer, " "); // first token "Write"
+		Token = strtok(NULL, " "); // second token "Register:"
+		sprintf(str2, "Address to Access: ");
+		Token = strtok(NULL, " "); // third token "[register address]"
+		sprintf(str3, "%s\r\n", Token);
+		Register_Address = strtol(Token, NULL, 16); // convert register address to a number
+		sprintf(str4, "Value Sent: ");
+		Token = strtok(NULL, "\r\n"); // fourth token "[register value]"
+		sprintf(str5, "%s\r\n", Token);
+		Register_Value = strtol(Token, NULL, 16); // convert register value to a number
+		CC1200_Write_Single_Register(&SPI_Info, Register_Address, Register_Value);
+		Message_Length = sprintf(Message, "%s%s%s%s%s", str1, str2, str3, str4, str5);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else if (strncmp((char*) rx_buffer, "Read Register:", strlen("Read Register:")) == 0)
+	{
+		sprintf(str1, "User Input: Read Register\r\n");
+		sprintf(str2, "Address to Access: ");
+		Token = strtok((char*) rx_buffer, " "); // first token "Read"
+		Token = strtok(NULL, " "); // second token "Register:"
+		Token = strtok(NULL, "\r\n"); // third token "[register address]"
+		sprintf(str3, "%s\r\n", Token);
+		Register_Address = strtol(Token, NULL, 16); // convert register address to a number
+		CC1200_Read_Single_Register(&SPI_Info, Register_Address);
+		sprintf(str4, "Value Received: \r\n");
+		Message_Length = sprintf(Message, "%s%s%s%s", str1, str2, str3, str4);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else if (strncmp((char*) rx_buffer, "Write Extended Register:", strlen("Write Extended Register:")) == 0)
+	{
+		sprintf(str1, "User Input: Write Extended Register\r\n");
+		sprintf(str2, "Address to Access: ");
+		Token = strtok((char*) rx_buffer, " "); // first token "Write"
+		Token = strtok(NULL, " "); // second token "Extended"
+		Token = strtok(NULL, " "); // third token "Register:"
+		Token = strtok(NULL, " "); // fourth token "[register address]"
+		sprintf(str3, "%s\r\n", Token);
+		Register_Address = strtol(Token, NULL, 16); // convert register address to a number
+		sprintf(str4, "Value Sent: ");
+		Token = strtok(NULL, "\r\n"); // fifth token "[register value]"
+		sprintf(str5, "%s\r\n", Token);
+		Register_Value = strtol(Token, NULL, 16); // convert register value to a number
+		CC1200_Write_Single_Extended_Register(&SPI_Info, Register_Address, Register_Value);
+		Message_Length = sprintf(Message, "%s%s%s%s%s", str1, str2, str3, str4, str5);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else if (strncmp((char*) rx_buffer, "Read Extended Register:", strlen("Read Extended Register:")) == 0)
+	{
+		sprintf(str1, "User Input: Read Extended Register\r\n");
+		sprintf(str2, "Address to Access: ");
+		Token = strtok((char*) rx_buffer, " "); // first token "Read"
+		Token = strtok(NULL, " "); // second token "Extended"
+		Token = strtok(NULL, " "); // third token "Register:"
+		Token = strtok(NULL, "\r\n"); // fourth token "[register address]"
+		sprintf(str3, "%s\r\n", Token);
+		Register_Address = strtol(Token, NULL, 16); // convert register address to a number
+		CC1200_Read_Single_Extended_Register(&SPI_Info, Register_Address);
+		sprintf(str4, "Value Received: \r\n");
+		Message_Length = sprintf(Message, "%s%s%s%s", str1, str2, str3, str4);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else
+	{
+		CDC_Transmit_FS(rx_buffer, rx_buffer_len);
+	}
+
+	return 0;
+}
+
+
+
+//uint8_t Process_String(char* Input_String)
+//{
+//	char Message[100]; // comparison string
+//	uint16_t Message_Length;
+//	char* Token; // string splitting
+//	uint8_t Addr; // storing register address
+//	uint8_t Val; // storing register value
+//	char Prompt[100]; // string to transmit
+//	uint16_t Prompt_Length;
+//
+//	Message_Length = sprintf(Message, "Start");
+//	if (memcmp(Input_String, Message, Message_Length) == 0)
+//	{
+//		Prompt_Length = sprintf(Prompt, "Initializing the CC1200 for Operation\r\n");
+//		CDC_Transmit_FS((uint8_t*) Prompt, Prompt_Length+1);
+//		HAL_Delay(100);
+//		//CC1200_Init(&CC1200_SPI_Info, &CC1200_Data, GPIOB, GPIO_PIN_6, &hspi1);
+//
+//		Prompt_Length = sprintf(Prompt, "Configuring the CC1200 with Default Settings\r\n");
+//		CDC_Transmit_FS((uint8_t*) Prompt, Prompt_Length+1);
+//		HAL_Delay(100);
+//		//CC1200_Configure(&CC1200_SPI_Info, Preferred_Register_Settings, Preferred_Extended_Register_Settings);
+//	}
+//
+//	Message_Length = sprintf(Message, "Transmit");
+//	if (memcmp(Input_String, Message, Message_Length) == 0)
+//	{
+//		Token = strtok(Input_String, " ");
+//		CC1200_Transmit(&CC1200_SPI_Info, (uint8_t*) Token);
+//	}
+//
+//	uint8_t Received_Data[100];
+//	Message_Length = sprintf(Message, "Receive");
+//	if (memcmp(Input_String, Message, Message_Length) == 0)
+//	{
+//		//CC1200_Receive(&CC1200_SPI_Info, Received_Data);
+//	}
+//
+//	Message_Length = sprintf(Message, "Exit");
+//	if (memcmp(Input_String, Message, Message_Length) == 0)
+//	{
+//		//CC1200_Command_Strobe(&CC1200_SPI_Info, CC1200_COMMAND_SIDLE);
+//	}
+//
+//	Message_Length = sprintf(Message, "Reset");
+//	if (memcmp(Input_String, Message, Message_Length) == 0)
+//	{
+//		//CC1200_Command_Strobe(&CC1200_SPI_Info, CC1200_COMMAND_SRES);
+//	}
+//
+//	Message_Length = sprintf(Message, "Write Register");
+//	if (memcmp(Input_String, Message, Message_Length) == 0)
+//	{
+//		// split once for address and again for value
+//		Token = strtok(Input_String, " ");
+//		Address = atoi(Token);
+//		Token = strtok(Input_String, " ");
+//		Val = atoi(Token);
+//		//CC1200_Write_Single_Register(&CC1200_SPI_Info, Addr, Val);
+//	}
+//
+//	Message_Length = sprintf(Message, "Read Register");
+//	if (memcmp(Input_String, Message, Message_Length) == 0)
+//	{
+//		Token = strtok(Input_String, " ");
+//		//CC1200_Read_Single_Register(&CC1200_SPI_Info, (uint8_t) (atoi(Token)));
+//	}
+//
+//	Message_Length = sprintf(Message, "Write Extended Register");
+//	if (memcmp(Input_String, Message, Message_Length) == 0)
+//	{
+//		// split once for address and again for value
+//		Token = strtok(Input_String, " ");
+//		Addr = atoi(Token);
+//		Token = strtok(Input_String, " ");
+//		Val = atoi(Token);
+//		//CC1200_Write_Single_Extended_Register(&CC1200_SPI_Info, Addr, Val);
+//	}
+//
+//	Message_Length = sprintf(Message, "Read Extended Register");
+//	if (memcmp(Input_String, Message, Message_Length) == 0)
+//	{
+//		Token = strtok(Input_String, " ");
+//		//CC1200_Read_Single_Extended_Register(&CC1200_SPI_Info, (uint8_t) (atoi(Token)));
+//	}
+//
+//	return(0);
+//}
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */
 
 /**
