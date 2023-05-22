@@ -1,9 +1,9 @@
 ../Core/Src/CC1200.c:21:6:CC1200_Init	24	static
 ../Core/Src/CC1200.c:37:9:CC1200_Configure	32	static
 ../Core/Src/CC1200.c:89:9:CC1200_Write_Single_Register	32	static
-../Core/Src/CC1200.c:125:9:CC1200_Read_Single_Register	32	static
-../Core/Src/CC1200.c:166:9:CC1200_Write_Single_Extended_Register	32	static
-../Core/Src/CC1200.c:208:9:CC1200_Read_Single_Extended_Register	32	static
-../Core/Src/CC1200.c:253:9:CC1200_Command_Strobe	32	static
-../Core/Src/CC1200.c:287:9:CC1200_Transmit	32	static
-../Core/Src/CC1200.c:323:9:CC1200_Receive	32	static
+../Core/Src/CC1200.c:127:9:CC1200_Read_Single_Register	32	static
+../Core/Src/CC1200.c:168:9:CC1200_Write_Single_Extended_Register	32	static
+../Core/Src/CC1200.c:210:9:CC1200_Read_Single_Extended_Register	32	static
+../Core/Src/CC1200.c:255:9:CC1200_Command_Strobe	32	static
+../Core/Src/CC1200.c:289:9:CC1200_Transmit	40	static
+../Core/Src/CC1200.c:323:9:CC1200_Receive	40	static

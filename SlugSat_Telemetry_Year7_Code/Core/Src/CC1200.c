@@ -103,6 +103,8 @@ uint8_t CC1200_Write_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Addres
 
 		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Header_Byte, SPI_Info -> MISO_Data, 1, 100);
 
+		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Register_Value, SPI_Info -> MISO_Data, 1, 100);
+
 		HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_SET);
 
 		retval = 0;
@@ -284,30 +286,28 @@ uint8_t CC1200_Command_Strobe(CC1200_t* SPI_Info, uint8_t Register_Address)
   * @param Register_Address : address of register
   * @retval Success (0) or Error (1)
   */
-uint8_t CC1200_Transmit(CC1200_t* SPI_Info, uint8_t* TX_Packet)
+uint8_t CC1200_Transmit(CC1200_t* SPI_Info, uint8_t* TX_Packet, uint8_t TX_Packet_Length)
 {
 	uint8_t Header_Byte = 0x40 | 0x3F; // 0100 0000 | 0011 1111
-	uint8_t Packet_Length = sizeof(TX_Packet);
 	uint8_t i; // counter
+	//uint8_t Status; // status byte
 
-	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SFSTXON); // enable and calibrate frequency synthesizer
-	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_STX); // enable TX
+	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SFTX); // flush TX FIFO (before loading data)
 
 	HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_RESET);
 
 	HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Header_Byte, SPI_Info -> MISO_Data, 1, 100);
 
-	HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Packet_Length, SPI_Info -> MISO_Data, 1, 100);
+	HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &TX_Packet_Length, SPI_Info -> MISO_Data, 1, 100);
 
-	for(i = 0; i < Packet_Length; i++)
+	for(i = 0; i < TX_Packet_Length; i++)
 	{
-		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &TX_Packet[i], SPI_Info -> MISO_Data, 1, 100);
+		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &(TX_Packet[i]), SPI_Info -> MISO_Data, 1, 100);
 	}
 
 	HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_SET);
 
-	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SFTX); // flush TX FIFO
-	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SIDLE); // exit RX/TX
+	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_STX); // enable TX
 
 	return 0;
 }
@@ -320,34 +320,34 @@ uint8_t CC1200_Transmit(CC1200_t* SPI_Info, uint8_t* TX_Packet)
   * @param Register_Address : address of register
   * @retval Success (0) or Error (1)
   */
-uint8_t CC1200_Receive(CC1200_t* SPI_Info, uint8_t* RX_Packet)
+uint8_t CC1200_Receive(CC1200_t* SPI_Info, uint8_t* RX_Packet, uint8_t* RX_Packet_Length)
 {
 	uint8_t Header_Byte = 0xC0 | 0x3F; // 1100 0000 | 0011 1111
-	uint8_t No_Operation = CC1200_COMMAND_SNOP;
+	uint8_t Placeholder = 0x00;
 	uint8_t Packet_Length;
 	uint8_t i; // counter
 
-	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SFSTXON); // enable and calibrate frequency synthesizer
+	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SFRX); // flush RX FIFO (before initiating receive)
+
 	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SRX); // enable RX
 
 	HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_RESET);
 
 	HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Header_Byte, SPI_Info -> MISO_Data, 1, 100);
 
-	HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &No_Operation, SPI_Info -> MISO_Data, 1, 100);
-	Packet_Length = *(SPI_Info->MISO_Data);
+	HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Placeholder, SPI_Info -> MISO_Data, 1, 100);
+	Packet_Length = (SPI_Info->MISO_Data) [0];
+	*RX_Packet_Length = Packet_Length;
 
 	for(i = 0; i < Packet_Length; i++)
 	{
-		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &No_Operation, SPI_Info -> MISO_Data, 1, 100);
-		RX_Packet[i] = *(SPI_Info->MISO_Data);
+		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Placeholder, SPI_Info -> MISO_Data, 1, 100);
+		RX_Packet[i] = (SPI_Info->MISO_Data) [0];
 	}
-	RX_Packet[Packet_Length] = '\0';
+
+	RX_Packet[Packet_Length] = '\0'; // null termination
 
 	HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_SET);
-
-	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SFRX); // flush TX FIFO
-	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SIDLE); // exit RX/TX
 
 	return 0;
 }

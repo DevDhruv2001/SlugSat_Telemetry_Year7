@@ -1,9 +1,9 @@
 CC1200.c:21:6:CC1200_Init	1
 CC1200.c:37:9:CC1200_Configure	7
 CC1200.c:89:9:CC1200_Write_Single_Register	2
-CC1200.c:125:9:CC1200_Read_Single_Register	2
-CC1200.c:166:9:CC1200_Write_Single_Extended_Register	6
-CC1200.c:208:9:CC1200_Read_Single_Extended_Register	6
-CC1200.c:253:9:CC1200_Command_Strobe	3
-CC1200.c:287:9:CC1200_Transmit	2
+CC1200.c:127:9:CC1200_Read_Single_Register	2
+CC1200.c:168:9:CC1200_Write_Single_Extended_Register	6
+CC1200.c:210:9:CC1200_Read_Single_Extended_Register	6
+CC1200.c:255:9:CC1200_Command_Strobe	3
+CC1200.c:289:9:CC1200_Transmit	2
 CC1200.c:323:9:CC1200_Receive	2

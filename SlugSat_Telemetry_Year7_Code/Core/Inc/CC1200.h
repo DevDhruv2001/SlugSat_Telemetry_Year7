@@ -111,7 +111,7 @@ uint8_t CC1200_Command_Strobe(CC1200_t* SPI_Info, uint8_t Register_Address);
   * @param Register_Address : address of register
   * @retval Success (0) or Error (1)
   */
-uint8_t CC1200_Transmit(CC1200_t* SPI_Info, uint8_t* TX_Packet);
+uint8_t CC1200_Transmit(CC1200_t* SPI_Info, uint8_t* TX_Packet, uint8_t TX_Packet_Length);
 
 /**
   * @brief Receive Packets via Standard FIFO Access
@@ -121,6 +121,6 @@ uint8_t CC1200_Transmit(CC1200_t* SPI_Info, uint8_t* TX_Packet);
   * @param Register_Address : address of register
   * @retval Success (0) or Error (1)
   */
-uint8_t CC1200_Receive(CC1200_t* SPI_Info, uint8_t* RX_Packet);
+uint8_t CC1200_Receive(CC1200_t* SPI_Info, uint8_t* RX_Packet, uint8_t* RX_Packet_Length);
 
 #endif /* INC_CC1200_H_ */
