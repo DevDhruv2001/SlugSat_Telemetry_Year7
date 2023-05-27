@@ -38,23 +38,30 @@ uint8_t CC1200_Configure(CC1200_t* SPI_Info, RegisterSetting_t* Register_Setting
 {
 	uint8_t retval = 0;
 
-	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SRES); // reset the chip
+	//CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SRES); // reset the chip
 
 	uint8_t Address;
 	uint8_t ConfigIndex = 0;
 	// configure standard registers
+
+	//uint8_t Register_Count = sizeof(Register_Setting);
+
 	for (Address = 0x00; Address < 0x2F; Address++)
 	{
 		// If at the next desired address to configure, then configure it
 		if (Address == Register_Setting[ConfigIndex].Address)
 		{
-			CC1200_Write_Single_Register(SPI_Info, Address, Register_Setting[ConfigIndex].Value);
-			CC1200_Read_Single_Register(SPI_Info, Address);
-			if (*(SPI_Info->MISO_Data) != Register_Setting[ConfigIndex].Value)
+			retval = CC1200_Write_Single_Register(SPI_Info, Address, Register_Setting[ConfigIndex].Value);
+			retval = CC1200_Read_Single_Register(SPI_Info, Address);
+			if ((SPI_Info->MISO_Data) [0] != Register_Setting[ConfigIndex].Value)
 			{
 				retval = 1;
 			}
 			ConfigIndex++;
+		}
+		else
+		{
+			continue;
 		}
 	}
 
@@ -65,13 +72,17 @@ uint8_t CC1200_Configure(CC1200_t* SPI_Info, RegisterSetting_t* Register_Setting
 		// If at the next desired address to configure, then configure it
 		if (Address == Extended_Register_Setting[ConfigIndex].Address)
 		{
-			CC1200_Write_Single_Extended_Register(SPI_Info, Address, Extended_Register_Setting[ConfigIndex].Value);
-			CC1200_Read_Single_Extended_Register(SPI_Info, Address);
-			if (*(SPI_Info->MISO_Data) != Extended_Register_Setting[ConfigIndex].Value)
+			retval = CC1200_Write_Single_Extended_Register(SPI_Info, Address, Extended_Register_Setting[ConfigIndex].Value);
+			retval = CC1200_Read_Single_Extended_Register(SPI_Info, Address);
+			if ((SPI_Info->MISO_Data) [0] != Extended_Register_Setting[ConfigIndex].Value)
 			{
 				retval = 1;
 			}
 			ConfigIndex++;
+		}
+		else
+		{
+			continue;
 		}
 	}
 
@@ -279,7 +290,7 @@ uint8_t CC1200_Command_Strobe(CC1200_t* SPI_Info, uint8_t Register_Address)
 }
 
 /**
-  * @brief Transmit Packets via Standard FIFO Access
+  * @brief Transmit Packets via Standard FIFO Access (Write Packet to TX FIFO Buffer)
   * 	R/W = 0
   * 	B   = 1
   * @param SPI_Info : structure with MOSI/MISO data, CS Port/Pin, SPI handler
@@ -313,36 +324,34 @@ uint8_t CC1200_Transmit(CC1200_t* SPI_Info, uint8_t* TX_Packet, uint8_t TX_Packe
 }
 
 /**
-  * @brief Receive Packets via Standard FIFO Access
+  * Run function upon external interrupt trigger
+  * @brief Receive Packets via Standard FIFO Access (Read Packet from TX FIFO Buffer)
   * 	R/W = 1
   * 	B   = 1
   * @param SPI_Info : structure with MOSI/MISO data, CS Port/Pin, SPI handler
   * @param Register_Address : address of register
   * @retval Success (0) or Error (1)
   */
-uint8_t CC1200_Receive(CC1200_t* SPI_Info, uint8_t* RX_Packet, uint8_t* RX_Packet_Length)
+uint8_t CC1200_Receive(CC1200_t* SPI_Info, uint8_t* RX_Packet)
 {
 	uint8_t Header_Byte = 0xC0 | 0x3F; // 1100 0000 | 0011 1111
 	uint8_t Placeholder = 0x00;
 	uint8_t Packet_Length;
 	uint8_t i; // counter
 
-	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SFRX); // flush RX FIFO (before initiating receive)
-
-	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SRX); // enable RX
+	//memset(RX_Packet, 0, sizeof(RX_Packet)); // clear contents of RX Packet
 
 	HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_RESET);
 
 	HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Header_Byte, SPI_Info -> MISO_Data, 1, 100);
 
 	HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Placeholder, SPI_Info -> MISO_Data, 1, 100);
-	Packet_Length = (SPI_Info->MISO_Data) [0];
-	*RX_Packet_Length = Packet_Length;
+	Packet_Length = (SPI_Info -> MISO_Data) [0];
 
 	for(i = 0; i < Packet_Length; i++)
 	{
 		HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Placeholder, SPI_Info -> MISO_Data, 1, 100);
-		RX_Packet[i] = (SPI_Info->MISO_Data) [0];
+		RX_Packet[i] = (SPI_Info -> MISO_Data) [0];
 	}
 
 	RX_Packet[Packet_Length] = '\0'; // null termination

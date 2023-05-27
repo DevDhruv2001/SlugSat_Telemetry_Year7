@@ -16,14 +16,9 @@
   ******************************************************************************
   */
 /* USER CODE END Header */
-
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "usb_device.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -48,6 +43,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -57,12 +53,13 @@ extern uint8_t User_Input_Buffer_Len;
 
 CC1200_t SPI_Info; // structure with MISO data buffer, GPIO CS Port/Pin, and SPI handler
 uint8_t MISO_Data[1]; // MISO data buffer
+uint8_t RX_Packet[128]; // RX packet
 
 /* array mapping each CC1200 register with a default value */
 RegisterSetting_t Preferred_Register_Settings[]=
 {
   {CC1200_IOCFG3,              0x06},
-  {CC1200_IOCFG2,              0x06},
+  {CC1200_IOCFG2,              0x01}, // configure for RXFIFO_THR_PKT (reset value 0x06)
   {CC1200_IOCFG1,              0x30},
   {CC1200_IOCFG0,              0x3C},
   {CC1200_SYNC3,               0x00},
@@ -101,9 +98,6 @@ RegisterSetting_t Preferred_Register_Settings[]=
   {CC1200_RXDCM_TIME,          0x00},
   {CC1200_PKT_CFG2,            0x00},
   {CC1200_PKT_CFG1,            0x03},
-  // pkt_cfg0 smart rf is 0x20 for variable length
-  // [reserved] [length config] [length config] [pkt bit len] [pkt bit len] [pkt bit len] [uart] [swap]
-  // length config bits are 0 1
   {CC1200_PKT_CFG0,            0x20}, // 0 0 1 0 0 0 0 0 -> variable packet length
   {CC1200_RFEND_CFG1,          0x0F},
   {CC1200_RFEND_CFG0,          0x00},
@@ -220,7 +214,7 @@ RegisterSetting_t Preferred_Extended_Register_Settings[]=
   {CC1200_PARTNUMBER,          0x00},
   {CC1200_PARTVERSION,         0x00},
   {CC1200_SERIAL_STATUS,       0x00},
-  {CC1200_MODEM_STATUS1,       0x01},
+  {CC1200_MODEM_STATUS1,       0x10}, // (smartRF value 01)
   {CC1200_MODEM_STATUS0,       0x00},
   {CC1200_MARC_STATUS1,        0x00},
   {CC1200_MARC_STATUS0,        0x00},
@@ -255,7 +249,6 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI1_Init(void);
-extern int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -264,7 +257,23 @@ extern int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 /* USER CODE BEGIN 0 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	//RXTransmit function
+	//HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_6);
+	//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+	//HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
+	// Read from RX FIFO when Receive Complete
+
+	char Message[10000];
+	uint16_t Message_Length;
+	char str1[150];
+
+	CC1200_Receive(&SPI_Info, RX_Packet);
+
+	sprintf(Message, "Received the Following Message: ");
+	sprintf(str1, "%s\r\n", (char*) RX_Packet);
+	strcat(Message, str1);
+	Message_Length = strlen(Message);
+
+	CDC_Transmit_FS((uint8_t*) Message, Message_Length);
 }
 /* USER CODE END 0 */
 
@@ -274,45 +283,48 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   */
 int main(void)
 {
-	/* USER CODE BEGIN 1 */
+  /* USER CODE BEGIN 1 */
 
-	/* USER CODE END 1 */
+  /* USER CODE END 1 */
 
-	/* MCU Configuration--------------------------------------------------------*/
+  /* MCU Configuration--------------------------------------------------------*/
 
-	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
-	HAL_Init();
+  /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+  HAL_Init();
 
-	/* USER CODE BEGIN Init */
+  /* USER CODE BEGIN Init */
 
-	/* USER CODE END Init */
+  /* USER CODE END Init */
 
-	/* Configure the system clock */
-	SystemClock_Config();
+  /* Configure the system clock */
+  SystemClock_Config();
 
-	/* USER CODE BEGIN SysInit */
+  /* USER CODE BEGIN SysInit */
 
-	/* USER CODE END SysInit */
+  /* USER CODE END SysInit */
 
-	/* Initialize all configured peripherals */
-	MX_GPIO_Init();
-	MX_USART2_UART_Init();
-	MX_SPI1_Init();
-	MX_USB_DEVICE_Init();
-
-	/* USER CODE BEGIN 2 */
+  /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_USART2_UART_Init();
+  MX_SPI1_Init();
+  MX_USB_DEVICE_Init();
+  /* USER CODE BEGIN 2 */
 	//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET); // start with chip select high
-	uint8_t state;
+	//uint8_t state;
 	//uint8_t MOSI_Data[1];
-	char Message[100];
-	uint16_t Message_Length;
-	uint8_t flag = 1;
-	/* USER CODE END 2 */
+	//char Message[100];
+	//uint16_t Message_Length;
+	//uint8_t flag = 1;
+  /* USER CODE END 2 */
 
-	/* Infinite loop */
-	/* USER CODE BEGIN WHILE */
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
 	while (1)
 	{
+//		// Pin Test
+//		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
+//		HAL_Delay(100);
+
 //		// Hello World Test
 //		Message_Length = sprintf(Message, "Hello World!\r\n");
 //		CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
@@ -323,41 +335,41 @@ int main(void)
 
 //		// verify SO goes low
 //		MOSI_Data[0] = 0x3D; // no operation command
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET); // set chip select high
-		HAL_Delay(10); // delay
-		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET); // set chip select low
-		while(flag)
-		{
-			state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6); // read MISO pin
-			if (state == 0) // if MISO pin is low, the crystal oscillator is stable
-			{
-				flag = 0;
-				Message_Length = sprintf(Message, "Chip Ready\r\n");
-				CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
-				HAL_Delay(100);
-			}
-			else // otherwise, the crystal oscillator is not stable
-			{
-				flag = 1;
-				state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6); // read CS pin
-				if (state == 0)
-				{
-					Message_Length = sprintf(Message, "Chip Select Low\r\n");
-					CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
-					HAL_Delay(100);
-				}
-				else
-				{
-					Message_Length = sprintf(Message, "Chip Select High\r\n");
-					CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
-					HAL_Delay(100);
-				}
-				Message_Length = sprintf(Message, "Chip Not Ready\r\n");
-				CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
-				HAL_Delay(1000);
-				HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // set MISO low
-			}
-		}
+//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET); // set chip select high
+//		HAL_Delay(10); // delay
+//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET); // set chip select low
+//		while(flag)
+//		{
+//			state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6); // read MISO pin
+//			if (state == 0) // if MISO pin is low, the crystal oscillator is stable
+//			{
+//				flag = 0;
+//				Message_Length = sprintf(Message, "Chip Ready\r\n");
+//				CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
+//				HAL_Delay(100);
+//			}
+//			else // otherwise, the crystal oscillator is not stable
+//			{
+//				flag = 1;
+//				state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6); // read CS pin
+//				if (state == 0)
+//				{
+//					Message_Length = sprintf(Message, "Chip Select Low\r\n");
+//					CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
+//					HAL_Delay(100);
+//				}
+//				else
+//				{
+//					Message_Length = sprintf(Message, "Chip Select High\r\n");
+//					CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
+//					HAL_Delay(100);
+//				}
+//				Message_Length = sprintf(Message, "Chip Not Ready\r\n");
+//				CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
+//				HAL_Delay(1000);
+//				HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // set MISO low
+//			}
+//		}
 //		HAL_SPI_TransmitReceive(&hspi1, MOSI_Data, MISO_Data, 1, 100); // get the status byte, should be IDLE
 //		Message_Length = sprintf(Message, "Received Byte: 0X%02X\r\n", MISO_Data[0]);
 //		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
@@ -373,6 +385,39 @@ int main(void)
 //		Message_Length = sprintf(Message, "Received Byte: 0X%02X\r\n", MISO_Data[0]);
 //		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
 //		HAL_Delay(1000);
+
+//		// verify Extended Register Read & Write
+//		CC1200_Init(&SPI_Info, MISO_Data, GPIOB, GPIO_PIN_6, &hspi1);
+//		HAL_Delay(10);
+//		CC1200_Write_Single_Extended_Register(&SPI_Info, 0x00, 0xFA);
+//		HAL_Delay(10);
+//		CC1200_Read_Single_Extended_Register(&SPI_Info, 0x00);
+//		HAL_Delay(10);
+//		Message_Length = sprintf(Message, "Received Byte: 0X%02X\r\n", MISO_Data[0]);
+//		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+//		HAL_Delay(1000);
+
+		// verify configure
+//		uint8_t Address;
+//		uint8_t ConfigIndex = 0;
+//		CC1200_Init(&SPI_Info, MISO_Data, GPIOB, GPIO_PIN_6, &hspi1);
+//		HAL_Delay(10000);
+//		for (Address = 0x00; Address < 0x2F; Address++)
+//		{
+//			Message_Length = sprintf(Message, "Address: 0X%02X\r\n", Address);
+//			CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+//			HAL_Delay(1000);
+//			CC1200_Write_Single_Register(&SPI_Info, Address, Preferred_Register_Settings[ConfigIndex].Value);
+//			Message_Length = sprintf(Message, "Transmitted Byte: 0X%02X\r\n", Preferred_Register_Settings[ConfigIndex].Value);
+//			CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+//			HAL_Delay(1000);
+//			CC1200_Read_Single_Register(&SPI_Info, Address);
+//			Message_Length = sprintf(Message, "Received Byte: 0X%02X\r\n", MISO_Data[0]);
+//			CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+//			HAL_Delay(1000);
+//			ConfigIndex++;
+//		}
+
 
 //		// verify transmit and receive
 //		CC1200_Init(&SPI_Info, MISO_Data, GPIOB, GPIO_PIN_6, &hspi1);
@@ -402,11 +447,11 @@ int main(void)
 //		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
 //		HAL_Delay(1000);
 
-	/* USER CODE END WHILE */
+    /* USER CODE END WHILE */
 
-	/* USER CODE BEGIN 3 */
+    /* USER CODE BEGIN 3 */
 	}
-	/* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
 
 /**
@@ -540,6 +585,9 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : B1_Pin PC12 */
@@ -547,6 +595,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PA8 */
+  GPIO_InitStruct.Pin = GPIO_PIN_8;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB6 */
   GPIO_InitStruct.Pin = GPIO_PIN_6;

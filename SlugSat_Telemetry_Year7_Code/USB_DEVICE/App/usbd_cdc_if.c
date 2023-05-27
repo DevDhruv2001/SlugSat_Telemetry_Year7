@@ -19,12 +19,7 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
-#include "main.h"
 #include "usbd_cdc_if.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <string.h>
 
 /* USER CODE BEGIN INCLUDE */
 #include "CC1200.h"
@@ -37,7 +32,7 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define MAX_RX_BUFFER_SIZE 100 // Maximum size of the receive buffer
+#define MAX_RX_BUFFER_SIZE 1000 // Maximum size of the receive buffer
 static uint8_t rx_buffer[MAX_RX_BUFFER_SIZE]; // Receive buffer
 static uint32_t rx_buffer_len = 0; // Length of the data in the receive buffer
 
@@ -47,6 +42,7 @@ uint8_t User_Input_Buffer_Len;
 extern SPI_HandleTypeDef hspi1;
 extern CC1200_t SPI_Info; // structure with MISO data buffer, GPIO CS Port/Pin, and SPI handler
 extern uint8_t MISO_Data[1]; // MISO data buffer
+extern uint8_t RX_Packet[128]; // RX packet
 
 extern RegisterSetting_t Preferred_Register_Settings[];
 extern RegisterSetting_t Preferred_Extended_Register_Settings[];
@@ -143,7 +139,7 @@ extern USBD_HandleTypeDef hUsbDeviceFS;
 static int8_t CDC_Init_FS(void);
 static int8_t CDC_DeInit_FS(void);
 static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length);
-int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
+static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
 uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len);
@@ -275,7 +271,7 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   * @param  Len: Number of data received (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
-int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
+static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 6 */
 	// Copy the received data to the buffer
@@ -339,7 +335,7 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
 uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len)
 {
-	char Message[1000];
+	char Message[10000];
 	uint16_t Message_Length;
 	char str1[150];
 	char str2[150];
@@ -356,9 +352,11 @@ uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len)
 
 	uint8_t TX_Packet[127];
 	uint8_t TX_Packet_Length;
-	uint8_t RX_Packet[128]; // add null character
-	uint8_t RX_Packet_Length; // max 127
-	char RX_String[128]; // convert uint8_t to char
+
+	// receive variables (unused)
+	//uint8_t RX_Packet[128]; // add null character
+	//uint8_t RX_Packet_Length; // max 127
+	//char RX_String[128]; // convert uint8_t to char
 
 
 	if(strncmp((char*) rx_buffer, "Start", strlen("Start")) == 0)
@@ -379,15 +377,16 @@ uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len)
 			sprintf(str2, "Selected Mode: %s\r\n", Token);
 			sprintf(str3, "Configured the CC1200 with Default Register Settings\r\n");
 			check = CC1200_Configure(&SPI_Info, Preferred_Register_Settings, Preferred_Extended_Register_Settings);
-//			if (check == 1)
-//			{
-//				sprintf(str4, "No Error Occurred\r\n");
-//			}
-//			else // check == 0
-//			{
-//				sprintf(str4, "No Error Occurred\r\n");
-//			}
-			Message_Length = sprintf(Message, "%s%s%s", str1, str2, str3); // include str4
+			if (check == 1)
+			{
+				sprintf(str4, "Error Occurred\r\n");
+			}
+			else // check == 0
+			{
+				sprintf(str4, "No Error Occurred\r\n");
+			}
+			//Message_Length = sprintf(Message, "%s%s%s", str1, str2, str3);
+			Message_Length = sprintf(Message, "%s%s%s%s", str1, str2, str3, str4); // include str4
 		}
 		else
 		{
@@ -419,15 +418,10 @@ uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len)
 	{
 		sprintf(str1, "User Input: Receive\r\n");
 		sprintf(str2, "Set the CC1200 into Receive Mode\r\n");
-		sprintf(str3, "Received the Following Message: ");
-		CC1200_Receive(&SPI_Info, RX_Packet, &RX_Packet_Length);
-		for (i = 0; i < RX_Packet_Length; i++)
-		{
-			RX_String[i] = (char) (RX_Packet[i]);
-		}
-		sprintf(str4, "%s\r\n", RX_String);
-		sprintf(str4, "%s\r\n", (char*) RX_Packet);
-		Message_Length = sprintf(Message, "%s%s%s%s", str1, str2, str3, str4);
+		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SFRX); // flush RX FIFO (before initiating receive)
+		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SRX); // enable RX
+		//CC1200_Receive(&SPI_Info);
+		Message_Length = sprintf(Message, "%s%s", str1, str2);
 		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
 	}
 	else if (strncmp((char*) rx_buffer, "Exit", strlen("Exit")) == 0)
@@ -477,6 +471,38 @@ uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len)
 		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SNOP); // get status
 		sprintf(str5, "CC1200 State: 0X%02X\r\n", MISO_Data[0]);
 		Message_Length = sprintf(Message, "%s%s%s%s%s", str1, str2, str3, str4, str5);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else if (strncmp((char*) rx_buffer, "Print Registers", strlen("Print Registers")) == 0)
+	{
+		sprintf(Message, "User Input: Print Registers\r\n");
+		strcat(Message, "Register Space\r\n");
+		strcat(Message, "Address; Value\r\n");
+		for (Register_Address = 0x00; Register_Address < 0x2F; Register_Address++)
+		{
+
+			CC1200_Read_Single_Register(&SPI_Info, Register_Address);
+			Register_Value = MISO_Data[0];
+			sprintf(str1, "0X%02X; 0X%02X\r\n", Register_Address, Register_Value);
+			strcat(Message, str1);
+		}
+		strcat(Message, "Extended Register Space\r\n");
+		strcat(Message, "Address; Value\r\n");
+		for (Register_Address = 0x00; Register_Address <= 0xDA; Register_Address++)
+		{
+			check = CC1200_Read_Single_Extended_Register(&SPI_Info, Register_Address);
+			if (check == 0)
+			{
+				Register_Value = MISO_Data[0];
+				sprintf(str1, "0X%02X; 0X%02X\r\n", Register_Address, Register_Value);
+				strcat(Message, str1);
+			}
+			else
+			{
+				continue;
+			}
+		}
+		Message_Length = strlen(Message);
 		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
 	}
 	else if (strncmp((char*) rx_buffer, "Write Register:", strlen("Write Register:")) == 0)
