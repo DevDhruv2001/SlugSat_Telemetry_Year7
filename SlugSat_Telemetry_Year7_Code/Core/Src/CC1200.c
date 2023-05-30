@@ -358,5 +358,7 @@ uint8_t CC1200_Receive(CC1200_t* SPI_Info, uint8_t* RX_Packet)
 
 	HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_SET);
 
+	CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SFRX); // flush RX FIFO (after processing data)
+
 	return 0;
 }
