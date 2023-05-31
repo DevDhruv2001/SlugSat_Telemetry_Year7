@@ -429,22 +429,32 @@ uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len)
 	{
 		sprintf(str1, "User Input: Receive\r\n");
 		sprintf(str2, "Set the CC1200 into Receive Mode\r\n");
-		//CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SFRX); // flush RX FIFO (before initiating receive)
 		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SRX); // enable RX
-		//CC1200_Receive(&SPI_Info);
 		Message_Length = sprintf(Message, "%s%s", str1, str2);
 		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
 	}
-	else if (strncmp((char*) rx_buffer, "get received data", strlen("get received data")) == 0)
+	else if (strncmp((char*) rx_buffer, "read rx fifo", strlen("read rx fifo")) == 0)
 	{
-		CC1200_Receive(&SPI_Info, RX_Packet);
 
-		sprintf(Message, "Received the Following Message: ");
-		sprintf(str1, "%s\r\n", (char*) RX_Packet);
-		strcat(Message, str1);
-		Message_Length = strlen(Message);
+		check = CC1200_Receive(&SPI_Info, RX_Packet);
 
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+		if (check) // check == 1
+		{
+			sprintf(str1, "RX FIFO Empty!\r\n");
+			strcat(Message, str1);
+			Message_Length = strlen(Message);
+			CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+		}
+		else // check == 0
+		{
+			sprintf(Message, "Received the Following Message: ");
+			sprintf(str1, "%s\r\n", (char*) RX_Packet);
+			strcat(Message, str1);
+			Message_Length = strlen(Message);
+
+			CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+		}
+
 	}
 	else if (strncmp((char*) rx_buffer, "exit", strlen("exit")) == 0)
 	{

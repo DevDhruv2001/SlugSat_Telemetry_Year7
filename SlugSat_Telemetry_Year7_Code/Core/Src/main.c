@@ -44,6 +44,8 @@
 /* Private variables ---------------------------------------------------------*/
 SPI_HandleTypeDef hspi1;
 
+TIM_HandleTypeDef htim2;
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -78,7 +80,7 @@ uint8_t RX_Packet[128]; // RX packet
 RegisterSetting_t Transmit_Register_Settings[] =
 {
 	{CC1200_IOCFG3,              0x06},
-	{CC1200_IOCFG2,              0x06},
+	{CC1200_IOCFG2,              0x06}, // Smart RF value 0x06
 	{CC1200_IOCFG1,              0x30},
 	{CC1200_IOCFG0,              0x3C},
 	{CC1200_SYNC3,               0x00},
@@ -116,7 +118,7 @@ RegisterSetting_t Transmit_Register_Settings[] =
 	{CC1200_WOR_EVENT0_LSB,      0x00},
 	{CC1200_RXDCM_TIME,          0x00},
 	{CC1200_PKT_CFG2,            0x00},
-	{CC1200_PKT_CFG1,            0x03},
+	{CC1200_PKT_CFG1,            0x03}, // transmit pkt cfg 1 is 0x03
 	{CC1200_PKT_CFG0,            0x20},
 	{CC1200_RFEND_CFG1,          0x0F},
 	{CC1200_RFEND_CFG0,          0x00},
@@ -300,7 +302,7 @@ RegisterSetting_t Transmit_Extended_Register_Settings[] =
 RegisterSetting_t Receive_Register_Settings[] =
 {
   {CC1200_IOCFG3,              0x06},
-  {CC1200_IOCFG2,              0x06},
+  {CC1200_IOCFG2,              0x06}, // Smart RF value 0x06
   {CC1200_IOCFG1,              0x30},
   {CC1200_IOCFG0,              0x3C},
   {CC1200_SYNC3,               0x00},
@@ -338,7 +340,7 @@ RegisterSetting_t Receive_Register_Settings[] =
   {CC1200_WOR_EVENT0_LSB,      0x00},
   {CC1200_RXDCM_TIME,          0x00},
   {CC1200_PKT_CFG2,            0x00},
-  {CC1200_PKT_CFG1,            0x03},
+  {CC1200_PKT_CFG1,            0x03}, // receive pkt cfg1 is 0x03
   {CC1200_PKT_CFG0,            0x20},
   {CC1200_RFEND_CFG1,          0x0F},
   {CC1200_RFEND_CFG0,          0x00},
@@ -521,13 +523,14 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_SPI1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 //	char Message[10000];
 //	uint16_t Message_Length;
@@ -541,6 +544,36 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 //	Message_Length = strlen(Message);
 //
 //	CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	//HAL_TIM_Base_Start_IT(&htim2);
+
+	char Message[10000];
+	uint16_t Message_Length;
+	char str1[150];
+
+	uint8_t check;
+
+	check = CC1200_Receive(&SPI_Info, RX_Packet);
+
+	if (check) // check == 1
+	{
+		sprintf(str1, "RX FIFO Empty!\r\n");
+		strcat(Message, str1);
+		Message_Length = strlen(Message);
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
+	else // check == 0
+	{
+		sprintf(Message, "Received the Following Message: ");
+		sprintf(str1, "%s\r\n", (char*) RX_Packet);
+		strcat(Message, str1);
+		Message_Length = strlen(Message);
+
+		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+	}
 }
 /* USER CODE END 0 */
 
@@ -575,6 +608,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_SPI1_Init();
   MX_USB_DEVICE_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 	//HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET); // start with chip select high
 	//uint8_t state;
@@ -802,6 +836,51 @@ static void MX_SPI1_Init(void)
 }
 
 /**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 0;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 65535;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -857,11 +936,11 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : B1_Pin PC12 */
-  GPIO_InitStruct.Pin = B1_Pin|GPIO_PIN_12;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  /*Configure GPIO pin : B1_Pin */
+  GPIO_InitStruct.Pin = B1_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PA8 */
   GPIO_InitStruct.Pin = GPIO_PIN_8;
@@ -869,6 +948,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PC12 */
+  GPIO_InitStruct.Pin = GPIO_PIN_12;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : PB6 */
   GPIO_InitStruct.Pin = GPIO_PIN_6;

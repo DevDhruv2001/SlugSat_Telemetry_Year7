@@ -100,8 +100,6 @@ uint8_t CC1200_Configure(CC1200_t* SPI_Info, RegisterSetting_t* Register_Setting
 uint8_t CC1200_Write_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Address, uint8_t Register_Value)
 {
 	uint8_t retval;
-//	char Message[100];
-//	uint16_t Message_Length;
 
 	if (Register_Address < 0x2F)
 	{
@@ -138,8 +136,6 @@ uint8_t CC1200_Write_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Addres
 uint8_t CC1200_Read_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Address)
 {
 	uint8_t retval;
-//	char Message[100];
-//	uint16_t Message_Length;
 
 	if (Register_Address < 0x2F)
 	{
@@ -179,8 +175,6 @@ uint8_t CC1200_Read_Single_Register(CC1200_t* SPI_Info, uint8_t Register_Address
 uint8_t CC1200_Write_Single_Extended_Register(CC1200_t* SPI_Info, uint8_t Register_Address, uint8_t Register_Value)
 {
 	uint8_t retval;
-//	char Message[100];
-//	uint16_t Message_Length;
 
 	if ((Register_Address >= 0x3A && Register_Address <= 0x63) || (Register_Address >= 0xA3 && Register_Address <= 0xD1) ||
 			(Register_Address >= 0xDB))
@@ -221,8 +215,6 @@ uint8_t CC1200_Write_Single_Extended_Register(CC1200_t* SPI_Info, uint8_t Regist
 uint8_t CC1200_Read_Single_Extended_Register(CC1200_t* SPI_Info, uint8_t Register_Address)
 {
 	uint8_t retval;
-//	char Message[100];
-//	uint16_t Message_Length;
 
 	if ((Register_Address >= 0x3A && Register_Address <= 0x63) || (Register_Address >= 0xA3 && Register_Address <= 0xD1) ||
 				(Register_Address >= 0xDB))
@@ -266,8 +258,6 @@ uint8_t CC1200_Read_Single_Extended_Register(CC1200_t* SPI_Info, uint8_t Registe
 uint8_t CC1200_Command_Strobe(CC1200_t* SPI_Info, uint8_t Register_Address)
 {
 	uint8_t retval;
-	//char Message[100];
-	//uint16_t Message_Length;
 
 	if ((Register_Address >= 0x30) && (Register_Address <= 0x3D))
 	{
@@ -286,6 +276,7 @@ uint8_t CC1200_Command_Strobe(CC1200_t* SPI_Info, uint8_t Register_Address)
 	{
 		retval = 1;
 	}
+
 	return retval;
 }
 
@@ -339,13 +330,20 @@ uint8_t CC1200_Receive(CC1200_t* SPI_Info, uint8_t* RX_Packet)
 	uint8_t Packet_Length;
 	uint8_t i; // counter
 
-	//memset(RX_Packet, 0, sizeof(RX_Packet)); // clear contents of RX Packet
+//	CC1200_Read_Single_Register(SPI_Info, CC1200_NUM_RXBYTES);
+//	Packet_Length = (SPI_Info -> MISO_Data) [0];
+//
+//    if (Packet_Length == 0)
+//    {
+//		return 1;
+//    }
 
 	HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_RESET);
 
 	HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Header_Byte, SPI_Info -> MISO_Data, 1, 100);
 
 	HAL_SPI_TransmitReceive(SPI_Info -> HSPI, &Placeholder, SPI_Info -> MISO_Data, 1, 100);
+
 	Packet_Length = (SPI_Info -> MISO_Data) [0];
 
 	for(i = 0; i < Packet_Length; i++)
@@ -358,7 +356,7 @@ uint8_t CC1200_Receive(CC1200_t* SPI_Info, uint8_t* RX_Packet)
 
 	HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_SET);
 
-	CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SFRX); // flush RX FIFO (after processing data)
+	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SFRX); // flush RX FIFO (after processing data)
 
 	return 0;
 }
