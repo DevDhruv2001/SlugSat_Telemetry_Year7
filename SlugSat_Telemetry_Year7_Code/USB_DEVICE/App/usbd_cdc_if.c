@@ -32,15 +32,19 @@
 
 /* USER CODE BEGIN PV */
 /* Private variables ---------------------------------------------------------*/
-#define MAX_RX_BUFFER_SIZE 1000 // Maximum size of the receive buffer
-static uint8_t rx_buffer[MAX_RX_BUFFER_SIZE]; // Receive buffer
-static uint32_t rx_buffer_len = 0; // Length of the data in the receive buffer
 
+// user input buffer info
+#define MAX_RX_BUFFER_SIZE 1000 // Maximum size of the receive buffer
+static uint8_t RX_Buffer[MAX_RX_BUFFER_SIZE]; // Receive buffer
+static uint32_t RX_Buffer_Len = 0; // Length of the data in the receive buffer
+
+// SPI settings from main.c
 extern SPI_HandleTypeDef hspi1;
 extern CC1200_t SPI_Info; // structure with MISO data buffer, GPIO CS Port/Pin, and SPI handler
 extern uint8_t MISO_Data[1]; // MISO data buffer
 extern uint8_t RX_Packet[128]; // RX packet
 
+// register settings from main.c
 extern RegisterSetting_t Transmit_Register_Settings[];
 extern RegisterSetting_t Transmit_Extended_Register_Settings[];
 extern RegisterSetting_t Receive_Register_Settings[];
@@ -276,10 +280,10 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 	// Copy the received data to the buffer
 	for (int i = 0; i < *Len; i++)
 	{
-	if (rx_buffer_len < MAX_RX_BUFFER_SIZE)
+	if (RX_Buffer_Len < MAX_RX_BUFFER_SIZE)
 	{
-	  rx_buffer[rx_buffer_len] = Buf[i];
-	  rx_buffer_len = rx_buffer_len + 1;
+	  RX_Buffer[RX_Buffer_Len] = Buf[i];
+	  RX_Buffer_Len = RX_Buffer_Len + 1;
 	}
 	else
 	{
@@ -288,12 +292,12 @@ static int8_t CDC_Receive_FS(uint8_t* Buf, uint32_t *Len)
 	}
 
 	// Check if a complete message has been received
-	if (rx_buffer_len > 0 && rx_buffer[rx_buffer_len - 1] == '\n')
+	if (RX_Buffer_Len > 0 && RX_Buffer[RX_Buffer_Len - 1] == '\n')
 	{
 		// Process the received message
-		Process_Received_Message(rx_buffer, rx_buffer_len);
+		Process_Received_Message(RX_Buffer, RX_Buffer_Len);
 		// Clear the receive buffer
-		rx_buffer_len = 0;
+		RX_Buffer_Len = 0;
 	}
 
 	// Set up the USB device to receive a new packet
@@ -334,6 +338,8 @@ uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len)
 {
 	char Message[10000];
 	uint16_t Message_Length;
+	//char Message_Part[150];
+
 	char str1[150];
 	char str2[150];
 	char str3[150];
@@ -349,12 +355,6 @@ uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len)
 
 	uint8_t TX_Packet[127];
 	uint8_t TX_Packet_Length;
-
-	// receive variables (unused)
-	//uint8_t RX_Packet[128]; // add null character
-	//uint8_t RX_Packet_Length; // max 127
-	//char RX_String[128]; // convert uint8_t to char
-
 
 	if(strncmp((char*) rx_buffer, "start", strlen("start")) == 0)
 	{
