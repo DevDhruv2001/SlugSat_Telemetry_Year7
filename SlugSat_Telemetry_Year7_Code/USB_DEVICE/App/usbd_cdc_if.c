@@ -19,11 +19,14 @@
 /* USER CODE END Header */
 
 /* Includes ------------------------------------------------------------------*/
+#include "main.h"
+#include "usb_device.h"
 #include "usbd_cdc_if.h"
 
 /* USER CODE BEGIN INCLUDE */
 #include "CC1200.h"
 #include "CC1200_Registers.h"
+#include "Terminal.h"
 /* USER CODE END INCLUDE */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -145,7 +148,7 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length);
 static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
-uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len);
+uint8_t Process_Received_Message(uint8_t* RX_Buffer, uint32_t RX_Buffer_Len);
 /* USER CODE END PRIVATE_FUNCTIONS_DECLARATION */
 
 /**
@@ -334,282 +337,90 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 }
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
-uint8_t Process_Received_Message(uint8_t* rx_buffer, uint32_t rx_buffer_len)
+uint8_t Process_Received_Message(uint8_t* RX_Buffer, uint32_t RX_Buffer_Len)
 {
-	char Message[10000];
-	uint16_t Message_Length;
-	//char Message_Part[150];
-
-	char str1[150];
-	char str2[150];
-	char str3[150];
-	char str4[150];
-	char str5[150];
-	char* Token;
-
-	uint8_t i;
-	uint8_t check;
-
-	uint8_t Register_Address;
-	uint8_t Register_Value;
-
-	uint8_t TX_Packet[127];
-	uint8_t TX_Packet_Length;
-
-	if(strncmp((char*) rx_buffer, "start", strlen("start")) == 0)
+	if (strncmp((char*) RX_Buffer, "configure", strlen("configure")) == 0) // if configure
 	{
-		sprintf(str1, "User Input: Start\r\n");
-		sprintf(str2, "Initialized the CC1200 for Operation\r\n");
-		CC1200_Init(&SPI_Info, MISO_Data, GPIOB, GPIO_PIN_6, &hspi1);
-		Message_Length = sprintf(Message, "%s%s", str1, str2);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+		Configure(RX_Buffer, RX_Buffer_Len);
+		Print_Message();
 	}
-	else if (strncmp((char*) rx_buffer, "configure", strlen("configure")) == 0)
+	else if (strncmp((char*) RX_Buffer, "transmit", strlen("transmit")) == 0)
 	{
-		sprintf(str1, "User Input: Configure\r\n");
-		Token = strtok((char*) rx_buffer, " "); // first token "Configure:"
-		Token = strtok(NULL, "\r\n"); // second token "[mode]"
-		if (strncmp(Token, "transmit", strlen("transmit")) == 0)
-		{
-			sprintf(str2, "Selected Mode: %s\r\n", Token);
-			sprintf(str3, "Configured the CC1200 with Transmit Settings\r\n");
-			check = CC1200_Configure(&SPI_Info, Transmit_Register_Settings, Transmit_Extended_Register_Settings);
-			if (check == 1)
-			{
-				sprintf(str4, "Error Occurred\r\n");
-			}
-			else // check == 0
-			{
-				sprintf(str4, "No Error Occurred\r\n");
-			}
-			Message_Length = sprintf(Message, "%s%s%s%s", str1, str2, str3, str4); // include str4
-		}
-		else if (strncmp(Token, "receive", strlen("receive")) == 0)
-		{
-			sprintf(str2, "Selected Mode: %s\r\n", Token);
-			sprintf(str3, "Configured the CC1200 with Receive Settings\r\n");
-			check = CC1200_Configure(&SPI_Info, Receive_Register_Settings, Receive_Extended_Register_Settings);
-			if (check == 1)
-			{
-				sprintf(str4, "Error Occurred\r\n");
-			}
-			else // check == 0
-			{
-				sprintf(str4, "No Error Occurred\r\n");
-			}
-			Message_Length = sprintf(Message, "%s%s%s%s", str1, str2, str3, str4); // include str4
-		}
-		else
-		{
-			sprintf(str2, "Invalid Mode: %s\r\n", Token);
-			sprintf(str3, "Could Not Configure the CC1200\r\n");
-			Message_Length = sprintf(Message, "%s%s%s", str1, str2, str3);
-		}
-
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+		Transmit(RX_Buffer, RX_Buffer_Len);
+		Print_Message();
 	}
-	else if (strncmp((char*) rx_buffer, "transmit", strlen("transmit")) == 0)
+	else if (strncmp((char*) RX_Buffer, "receive", strlen("receive")) == 0)
 	{
-		sprintf(str1, "User Input: Transmit\r\n");
-		sprintf(str2, "Set the CC1200 into Transmit Mode\r\n");
-		sprintf(str3, "Transmitted the Following Message: ");
-		Token = strtok((char*) rx_buffer, " "); // first token "Transmit:"
-		Token = strtok(NULL, "\r\n"); // second token "[message to send]"
-		TX_Packet_Length = strlen(Token);
-		sprintf(str4, "%s\r\n", Token);
-		for (i = 0; i < TX_Packet_Length; i++)
-		{
-			TX_Packet[i] = (uint8_t) (Token[i]);
-		}
-		CC1200_Transmit(&SPI_Info, TX_Packet, TX_Packet_Length);
-		Message_Length = sprintf(Message, "%s%s%s%s", str1, str2, str3, str4);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+		Receive(RX_Buffer, RX_Buffer_Len);
+		Print_Message();
 	}
-	else if (strncmp((char*) rx_buffer, "receive", strlen("receive")) == 0)
+	else if (strncmp((char*) RX_Buffer, "status", strlen("status")) == 0)
 	{
-		sprintf(str1, "User Input: Receive\r\n");
-		sprintf(str2, "Set the CC1200 into Receive Mode\r\n");
-		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SRX); // enable RX
-		Message_Length = sprintf(Message, "%s%s", str1, str2);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+		Status(RX_Buffer, RX_Buffer_Len);
+		Print_Message();
 	}
-	else if (strncmp((char*) rx_buffer, "read rx fifo", strlen("read rx fifo")) == 0)
+	else if (strncmp((char*) RX_Buffer, "register", strlen("register")) == 0)
 	{
-
-		check = CC1200_Receive(&SPI_Info, RX_Packet);
-
-		if (check) // check == 1
-		{
-			sprintf(str1, "RX FIFO Empty!\r\n");
-			strcat(Message, str1);
-			Message_Length = strlen(Message);
-			CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-		}
-		else // check == 0
-		{
-			sprintf(Message, "Received the Following Message: ");
-			sprintf(str1, "%s\r\n", (char*) RX_Packet);
-			strcat(Message, str1);
-			Message_Length = strlen(Message);
-
-			CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-		}
-
+		Register_Access(RX_Buffer, RX_Buffer_Len);
+		Print_Message();
 	}
-	else if (strncmp((char*) rx_buffer, "exit", strlen("exit")) == 0)
+//	else if (input[0] == "register")
+//	{
+//		if (input[1] == "read"){
+//			if (input[2] == "a"){//all
+//				//read_register_all()
+//			}
+//			else if (input[2] == "ext"){
+//				if (input[3] == "a"){//all
+//				//read_extended_register_all()
+//				}
+//				else{
+//					//read_extended_register()
+//				}
+//			}
+//			else{
+//				//read_register()
+//			}
+//		}
+//		else if (input[1] == "write"){
+//			if (input[2] == "ext"){
+//				//write_extended_register()
+//			}
+//			else{
+//				//write_register()
+//			}
+//		}
+//	}
+	/*else if (strncmp((char*) RX_Buffer, "print registers", strlen("print registers")) == 0)
 	{
-		sprintf(str1, "User Input: Exit\r\n");
-		sprintf(str2, "Set the CC1200 into IDLE Mode\r\n");
-		sprintf(str3, "Register Values Can Be Changed\r\n");
-		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SIDLE);
-		Message_Length = sprintf(Message, "%s%s%s", str1, str2, str3);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+		Print_Registers(RX_Buffer, RX_Buffer_Len);
+		Print_Message();
 	}
-	else if (strncmp((char*) rx_buffer, "reset", strlen("reset")) == 0)
+	else if (strncmp((char*) RX_Buffer, "write register", strlen("write register")) == 0)
 	{
-		sprintf(str1, "User Input: Reset\r\n");
-		sprintf(str2, "Set the CC1200 into IDLE Mode\r\n");
-		sprintf(str3, "Register Values Reset to Default Values\r\n");
-		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SRES);
-		Message_Length = sprintf(Message, "%s%s%s", str1, str2, str3);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+		Write_Register(RX_Buffer, RX_Buffer_Len);
+		Print_Message();
 	}
-	else if (strncmp((char*) rx_buffer, "status", strlen("status")) == 0)
+	else if (strncmp((char*) RX_Buffer, "read register", strlen("read register")) == 0)
 	{
-		sprintf(str1, "User Input: Status\r\n");
-		sprintf(str2, "CC1200 Status: ");
-		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SNOP); // get status
-		sprintf(str3, "0X%02X\r\n", MISO_Data[0]);
-		Message_Length = sprintf(Message, "%s%s%s", str1, str2, str3);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+		Read_Register(RX_Buffer, RX_Buffer_Len);
+		Print_Message();
 	}
-	else if (strncmp((char*) rx_buffer, "command", strlen("command")) == 0)
+	else if (strncmp((char*) RX_Buffer, "write extended register", strlen("write extended register")) == 0)
 	{
-		sprintf(str1, "User Input: Command\r\n");
-		sprintf(str2, "Issued the Following Command: ");
-		Token = strtok((char*) rx_buffer, " "); // first token "Command:"
-		Token = strtok(NULL, "\r\n"); // second token "[command strobe]"
-		sprintf(str3, "%s\r\n", Token);
-		Register_Address = strtol(Token, NULL, 16); // convert register address to a number
-		check = CC1200_Command_Strobe(&SPI_Info, Register_Address); // issue command
-		if (check == 1)
-		{
-			sprintf(str4, "Invalid Command\r\n");
-		}
-		else // check == 0
-		{
-			sprintf(str4, "Valid Command\r\n");
-		}
-		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SNOP); // get status
-		sprintf(str5, "CC1200 State: 0X%02X\r\n", MISO_Data[0]);
-		Message_Length = sprintf(Message, "%s%s%s%s%s", str1, str2, str3, str4, str5);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+		Write_Extended_Register(RX_Buffer, RX_Buffer_Len);
+		Print_Message();
 	}
-	else if (strncmp((char*) rx_buffer, "print registers", strlen("print registers")) == 0)
+	else if (strncmp((char*) RX_Buffer, "read extended register", strlen("read extended register")) == 0)
 	{
-		sprintf(Message, "User Input: Print Registers\r\n");
-		strcat(Message, "Register Space\r\n");
-		strcat(Message, "Address; Value\r\n");
-		for (Register_Address = 0x00; Register_Address < 0x2F; Register_Address++)
-		{
-
-			CC1200_Read_Single_Register(&SPI_Info, Register_Address);
-			Register_Value = MISO_Data[0];
-			sprintf(str1, "0X%02X; 0X%02X\r\n", Register_Address, Register_Value);
-			strcat(Message, str1);
-		}
-		strcat(Message, "Extended Register Space\r\n");
-		strcat(Message, "Address; Value\r\n");
-		for (Register_Address = 0x00; Register_Address <= 0xDA; Register_Address++)
-		{
-			check = CC1200_Read_Single_Extended_Register(&SPI_Info, Register_Address);
-			if (check == 0)
-			{
-				Register_Value = MISO_Data[0];
-				sprintf(str1, "0X%02X; 0X%02X\r\n", Register_Address, Register_Value);
-				strcat(Message, str1);
-			}
-			else
-			{
-				continue;
-			}
-		}
-		Message_Length = strlen(Message);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
+		Read_Extended_Register(RX_Buffer, RX_Buffer_Len);
+		Print_Message();
 	}
-	else if (strncmp((char*) rx_buffer, "write register", strlen("write register")) == 0)
-	{
-		sprintf(str1, "User Input: Write Register\r\n");
-		Token = strtok((char*) rx_buffer, " "); // first token "Write"
-		Token = strtok(NULL, " "); // second token "Register:"
-		sprintf(str2, "Address to Access: ");
-		Token = strtok(NULL, " "); // third token "[register address]"
-		sprintf(str3, "%s\r\n", Token);
-		Register_Address = strtol(Token, NULL, 16); // convert register address to a number
-		sprintf(str4, "Value Sent: ");
-		Token = strtok(NULL, "\r\n"); // fourth token "[register value]"
-		sprintf(str5, "%s\r\n", Token);
-		Register_Value = strtol(Token, NULL, 16); // convert register value to a number
-		check = CC1200_Write_Single_Register(&SPI_Info, Register_Address, Register_Value);
-		Message_Length = sprintf(Message, "%s%s%s%s%s", str1, str2, str3, str4, str5);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-	}
-	else if (strncmp((char*) rx_buffer, "read register", strlen("read register")) == 0)
-	{
-		sprintf(str1, "User Input: Read Register\r\n");
-		sprintf(str2, "Address to Access: ");
-		Token = strtok((char*) rx_buffer, " "); // first token "Read"
-		Token = strtok(NULL, " "); // second token "Register:"
-		Token = strtok(NULL, "\r\n"); // third token "[register address]"
-		sprintf(str3, "%s\r\n", Token);
-		Register_Address = strtol(Token, NULL, 16); // convert register address to a number
-		check = CC1200_Read_Single_Register(&SPI_Info, Register_Address);
-		sprintf(str4, "Value Received: ");
-		Register_Value = MISO_Data[0];
-		sprintf(str5, "0X%02X\r\n", Register_Value);
-		Message_Length = sprintf(Message, "%s%s%s%s%s", str1, str2, str3, str4, str5);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-	}
-	else if (strncmp((char*) rx_buffer, "write extended register", strlen("write extended register")) == 0)
-	{
-		sprintf(str1, "User Input: Write Extended Register\r\n");
-		sprintf(str2, "Address to Access: ");
-		Token = strtok((char*) rx_buffer, " "); // first token "Write"
-		Token = strtok(NULL, " "); // second token "Extended"
-		Token = strtok(NULL, " "); // third token "Register:"
-		Token = strtok(NULL, " "); // fourth token "[register address]"
-		sprintf(str3, "%s\r\n", Token);
-		Register_Address = strtol(Token, NULL, 16); // convert register address to a number
-		sprintf(str4, "Value Sent: ");
-		Token = strtok(NULL, "\r\n"); // fifth token "[register value]"
-		sprintf(str5, "%s\r\n", Token);
-		Register_Value = strtol(Token, NULL, 16); // convert register value to a number
-		check = CC1200_Write_Single_Extended_Register(&SPI_Info, Register_Address, Register_Value);
-		Message_Length = sprintf(Message, "%s%s%s%s%s", str1, str2, str3, str4, str5);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-	}
-	else if (strncmp((char*) rx_buffer, "read extended register", strlen("read extended register")) == 0)
-	{
-		sprintf(str1, "User Input: Read Extended Register\r\n");
-		sprintf(str2, "Address to Access: ");
-		Token = strtok((char*) rx_buffer, " "); // first token "Read"
-		Token = strtok(NULL, " "); // second token "Extended"
-		Token = strtok(NULL, " "); // third token "Register:"
-		Token = strtok(NULL, "\r\n"); // fourth token "[register address]"
-		sprintf(str3, "%s\r\n", Token);
-		Register_Address = strtol(Token, NULL, 16); // convert register address to a number
-		check = CC1200_Read_Single_Extended_Register(&SPI_Info, Register_Address);
-		sprintf(str4, "Value Received: ");
-		Register_Value = MISO_Data[0];
-		sprintf(str5, "0X%02X\r\n", Register_Value);
-		Message_Length = sprintf(Message, "%s%s%s%s%s", str1, str2, str3, str4, str5);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-	}
+	*/
 	else
 	{
-		CDC_Transmit_FS(rx_buffer, rx_buffer_len);
+		CDC_Transmit_FS(RX_Buffer, RX_Buffer_Len);
 	}
-
 	return 0;
 }
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */

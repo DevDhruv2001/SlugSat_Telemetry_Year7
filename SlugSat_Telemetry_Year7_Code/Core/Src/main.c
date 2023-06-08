@@ -25,6 +25,7 @@
 #include "usbd_cdc_if.h"
 #include "CC1200.h"
 #include "CC1200_Registers.h"
+#include "Terminal.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -533,30 +534,8 @@ static void MX_TIM2_Init(void);
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	char Message[10000];
-	uint16_t Message_Length;
-	char str1[150];
-
-	uint8_t check;
-
-	check = CC1200_Receive(&SPI_Info, RX_Packet);
-
-	if (check) // check == 1
-	{
-		sprintf(str1, "RX FIFO Empty!\r\n");
-		strcat(Message, str1);
-		Message_Length = strlen(Message);
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-	}
-	else // check == 0
-	{
-		sprintf(Message, "Received the Following Message: ");
-		sprintf(str1, "%s\r\n", (char*) RX_Packet);
-		strcat(Message, str1);
-		Message_Length = strlen(Message);
-
-		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-	}
+	Read_RX_FIFO();
+	Print_Message();
 }
 /* USER CODE END 0 */
 
@@ -593,142 +572,13 @@ int main(void)
 	MX_USB_DEVICE_Init();
 	MX_TIM2_Init();
 	/* USER CODE BEGIN 2 */
-//	// variables for test harnesses
-//	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET); // start with chip select high
-//	uint8_t state;
-//	uint8_t MOSI_Data[1];
-//	char Message[100];
-//	uint16_t Message_Length;
-//	uint8_t flag = 1;
+	CC1200_Init(&SPI_Info, MISO_Data, GPIOB, GPIO_PIN_6, &hspi1);
 	/* USER CODE END 2 */
 
 	/* Infinite loop */
 	/* USER CODE BEGIN WHILE */
 	while (1)
 	{
-//		// Pin Test (Toggle a digital output pin to turn an LED on and off)
-//		HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_8);
-//		HAL_Delay(100);
-
-//		// Hello World Test (print hello world on a serial terminal)
-//		Message_Length = sprintf(Message, "Hello World!\r\n");
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
-//		HAL_Delay(100); // delay 1 sec
-//		Message_Length = sprintf(Message, "Bye World!\r\n");
-//		CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
-//		HAL_Delay(1000); // delay 1 sec
-
-//		// Verify SO pin on CC1200 goes low when CS pin is driven low
-//		MOSI_Data[0] = 0x3D; // no operation command
-//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET); // set chip select high
-//		HAL_Delay(10); // delay
-//		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET); // set chip select low
-//		while(flag) // keep reading SO pin to see it goes low eventually
-//		{
-//			state = HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6); // read MISO pin
-//			if (state == 0) // if MISO pin is low, the crystal oscillator is stable
-//			{
-//				flag = 0;
-//				Message_Length = sprintf(Message, "Chip Ready\r\n");
-//				CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
-//				HAL_Delay(100);
-//			}
-//			else // otherwise, the crystal oscillator is not stable
-//			{
-//				flag = 1;
-//				state = HAL_GPIO_ReadPin(GPIOB, GPIO_PIN_6); // read CS pin
-//				if (state == 0) // CS pin should be low
-//				{
-//					Message_Length = sprintf(Message, "Chip Select Low\r\n");
-//					CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
-//					HAL_Delay(100);
-//				}
-//				else // CS pin should not be high
-//				{
-//					Message_Length = sprintf(Message, "Chip Select High\r\n");
-//					CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
-//					HAL_Delay(100);
-//				}
-//				Message_Length = sprintf(Message, "Chip Not Ready\r\n");
-//				CDC_Transmit_FS((uint8_t*) Message, (Message_Length));
-//				HAL_Delay(1000);
-//				HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // set MISO low
-//			}
-//		}
-//		HAL_SPI_TransmitReceive(&hspi1, MOSI_Data, MISO_Data, 1, 100); // get the status byte, should be IDLE
-//		Message_Length = sprintf(Message, "Received Byte: 0X%02X\r\n", MISO_Data[0]);
-//		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-//		HAL_Delay(100);
-
-//		// verify Register Read & Write
-//		CC1200_Init(&SPI_Info, MISO_Data, GPIOB, GPIO_PIN_6, &hspi1);
-//		HAL_Delay(10);
-//		CC1200_Write_Single_Register(&SPI_Info, 0x00, 0xAA);
-//		HAL_Delay(10);
-//		CC1200_Read_Single_Register(&SPI_Info, 0x00);
-//		HAL_Delay(10);
-//		Message_Length = sprintf(Message, "Received Byte: 0X%02X\r\n", MISO_Data[0]);
-//		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-//		HAL_Delay(1000);
-
-//		// verify Extended Register Read & Write
-//		CC1200_Init(&SPI_Info, MISO_Data, GPIOB, GPIO_PIN_6, &hspi1);
-//		HAL_Delay(10);
-//		CC1200_Write_Single_Extended_Register(&SPI_Info, 0x00, 0xFA);
-//		HAL_Delay(10);
-//		CC1200_Read_Single_Extended_Register(&SPI_Info, 0x00);
-//		HAL_Delay(10);
-//		Message_Length = sprintf(Message, "Received Byte: 0X%02X\r\n", MISO_Data[0]);
-//		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-//		HAL_Delay(1000);
-
-//		// verify registers can be configured to appropriate values from register settings
-//		uint8_t Address;
-//		uint8_t ConfigIndex = 0;
-//		CC1200_Init(&SPI_Info, MISO_Data, GPIOB, GPIO_PIN_6, &hspi1);
-//		HAL_Delay(10000);
-//		for (Address = 0x00; Address < 0x2F; Address++)
-//		{
-//			Message_Length = sprintf(Message, "Address: 0X%02X\r\n", Address);
-//			CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-//			HAL_Delay(1000);
-//			CC1200_Write_Single_Register(&SPI_Info, Address, Preferred_Register_Settings[ConfigIndex].Value);
-//			Message_Length = sprintf(Message, "Transmitted Byte: 0X%02X\r\n", Preferred_Register_Settings[ConfigIndex].Value);
-//			CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-//			HAL_Delay(1000);
-//			CC1200_Read_Single_Register(&SPI_Info, Address);
-//			Message_Length = sprintf(Message, "Received Byte: 0X%02X\r\n", MISO_Data[0]);
-//			CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-//			HAL_Delay(1000);
-//			ConfigIndex++;
-//		}
-
-
-//		// verify transmit and receive
-//		CC1200_Init(&SPI_Info, MISO_Data, GPIOB, GPIO_PIN_6, &hspi1);
-//		HAL_Delay(10);
-//		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SIDLE);
-//		HAL_Delay(10);
-//		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SNOP);
-//		HAL_Delay(10);
-//		Message_Length = sprintf(Message, "Received Byte: 0X%02X\r\n", MISO_Data[0]);
-//		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-//		HAL_Delay(1000);
-//		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_STX);
-//		HAL_Delay(10);
-//		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SNOP);
-//		HAL_Delay(10);
-//		Message_Length = sprintf(Message, "Received Byte: 0X%02X\r\n", MISO_Data[0]);
-//		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-//		HAL_Delay(1000);
-//		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SRX);
-//		HAL_Delay(10);
-//		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SNOP);
-//		HAL_Delay(10);
-//		Message_Length = sprintf(Message, "Received Byte: 0X%02X\r\n", MISO_Data[0]);
-//		CDC_Transmit_FS((uint8_t*) Message, Message_Length);
-//		HAL_Delay(1000);
-
 	/* USER CODE END WHILE */
 
 	/* USER CODE BEGIN 3 */

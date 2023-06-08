@@ -8,12 +8,6 @@
 #ifndef INC_CC1200_H_
 #define INC_CC1200_H_
 
-/* Includes */
-#include "main.h"
-#include "usb_device.h"
-#include "usbd_cdc_if.h"
-#include "CC1200_Registers.h"
-
 /* structure for the register addresses and desired values for configuring the CC1200 */
 typedef struct CC1200_RegisterSetting{
 	uint8_t Address;	// The register address to access
@@ -121,6 +115,6 @@ uint8_t CC1200_Transmit(CC1200_t* SPI_Info, uint8_t* TX_Packet, uint8_t TX_Packe
   * @param Register_Address : address of register
   * @retval Success (0) or Error (1)
   */
-uint8_t CC1200_Receive(CC1200_t* SPI_Info, uint8_t* RX_Packet);
+uint8_t CC1200_Read_RX_FIFO(CC1200_t* SPI_Info, uint8_t* RX_Packet);
 
 #endif /* INC_CC1200_H_ */

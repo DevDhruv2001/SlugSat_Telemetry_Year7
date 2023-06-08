@@ -1,8 +1,8 @@
-main.c:534:6:HAL_GPIO_EXTI_Callback	2
-main.c:567:5:main	1
-main.c:743:6:SystemClock_Config	3
-main.c:786:13:MX_SPI1_Init	2
-main.c:824:13:MX_TIM2_Init	4
-main.c:869:13:MX_USART2_UART_Init	2
-main.c:902:13:MX_GPIO_Init	1
-main.c:956:6:Error_Handler	1
+main.c:535:6:HAL_GPIO_EXTI_Callback	1
+main.c:546:5:main	1
+main.c:593:6:SystemClock_Config	3
+main.c:636:13:MX_SPI1_Init	2
+main.c:674:13:MX_TIM2_Init	4
+main.c:719:13:MX_USART2_UART_Init	2
+main.c:752:13:MX_GPIO_Init	1
+main.c:806:6:Error_Handler	1

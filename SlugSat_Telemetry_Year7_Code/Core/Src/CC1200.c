@@ -6,8 +6,12 @@
  */
 
 /* Includes */
+#include "main.h"
+#include "usb_device.h"
+#include "usbd_cdc_if.h"
 #include "CC1200.h"
 #include "CC1200_Registers.h"
+#include "Terminal.h"
 
 /**
  * @brief Initializes the CC1200 for SPI communication
@@ -38,14 +42,12 @@ uint8_t CC1200_Configure(CC1200_t* SPI_Info, RegisterSetting_t* Register_Setting
 {
 	uint8_t retval = 0;
 
-	//CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SRES); // reset the chip
+	// CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SRES); // reset the chip
 
 	uint8_t Address;
+
 	uint8_t ConfigIndex = 0;
 	// configure standard registers
-
-	//uint8_t Register_Count = sizeof(Register_Setting);
-
 	for (Address = 0x00; Address < 0x2F; Address++)
 	{
 		// If at the next desired address to configure, then configure it
@@ -226,9 +228,6 @@ uint8_t CC1200_Read_Single_Extended_Register(CC1200_t* SPI_Info, uint8_t Registe
 		uint8_t Header_Byte = 0x80 | 0x2F; // 1000 0000 | 0 0 1 0 1 1 1 1
 		uint8_t Placeholder = 0x00;
 		//uint8_t MOSI_Data[3] = {Header_Byte, Register_Address, Placeholder};
-		//(SPI_Info -> MOSI_Data)[0] = MOSI_Data[0];
-		//(SPI_Info -> MOSI_Data)[1] = MOSI_Data[1];
-		//(SPI_Info -> MOSI_Data)[2] = MOSI_Data[2];
 
 		HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_RESET);
 
@@ -262,7 +261,6 @@ uint8_t CC1200_Command_Strobe(CC1200_t* SPI_Info, uint8_t Register_Address)
 	if ((Register_Address >= 0x30) && (Register_Address <= 0x3D))
 	{
 		uint8_t Header_Byte = 0x00 | Register_Address; // 0000 0000 | 0 0 A5 A4 A3 A2 A1 A0
-		//SPI_Info -> MOSI_Data = &Header_Byte;
 
 		HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_RESET);
 
@@ -292,7 +290,6 @@ uint8_t CC1200_Transmit(CC1200_t* SPI_Info, uint8_t* TX_Packet, uint8_t TX_Packe
 {
 	uint8_t Header_Byte = 0x40 | 0x3F; // 0100 0000 | 0011 1111
 	uint8_t i; // counter
-	//uint8_t Status; // status byte
 
 	CC1200_Command_Strobe(SPI_Info, CC1200_COMMAND_SFTX); // flush TX FIFO (before loading data)
 
@@ -323,20 +320,20 @@ uint8_t CC1200_Transmit(CC1200_t* SPI_Info, uint8_t* TX_Packet, uint8_t TX_Packe
   * @param Register_Address : address of register
   * @retval Success (0) or Error (1)
   */
-uint8_t CC1200_Receive(CC1200_t* SPI_Info, uint8_t* RX_Packet)
+uint8_t CC1200_Read_RX_FIFO(CC1200_t* SPI_Info, uint8_t* RX_Packet)
 {
 	uint8_t Header_Byte = 0xC0 | 0x3F; // 1100 0000 | 0011 1111
 	uint8_t Placeholder = 0x00;
 	uint8_t Packet_Length;
 	uint8_t i; // counter
 
-//	CC1200_Read_Single_Register(SPI_Info, CC1200_NUM_RXBYTES);
-//	Packet_Length = (SPI_Info -> MISO_Data) [0];
-//
-//    if (Packet_Length == 0)
-//    {
-//		return 1;
-//    }
+	CC1200_Read_Single_Register(SPI_Info, CC1200_NUM_RXBYTES);
+	Packet_Length = (SPI_Info -> MISO_Data) [0];
+
+    if (Packet_Length == 0)
+    {
+		return 1;
+    }
 
 	HAL_GPIO_WritePin(SPI_Info -> CS_Port, SPI_Info -> CS_Pin, GPIO_PIN_RESET);
 

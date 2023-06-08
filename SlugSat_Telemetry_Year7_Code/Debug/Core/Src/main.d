@@ -39,8 +39,8 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_core.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h \
  ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h \
- ../Core/Inc/CC1200.h ../Core/Inc/main.h ../Core/Inc/CC1200_Registers.h \
- ../Core/Inc/CC1200_Registers.h
+ ../Core/Inc/CC1200.h ../Core/Inc/CC1200_Registers.h \
+ ../Core/Inc/Terminal.h
 ../Core/Inc/main.h:
 ../Drivers/STM32L1xx_HAL_Driver/Inc/stm32l1xx_hal.h:
 ../Core/Inc/stm32l1xx_hal_conf.h:
@@ -84,6 +84,5 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ioreq.h:
 ../Middlewares/ST/STM32_USB_Device_Library/Core/Inc/usbd_ctlreq.h:
 ../Core/Inc/CC1200.h:
-../Core/Inc/main.h:
 ../Core/Inc/CC1200_Registers.h:
-../Core/Inc/CC1200_Registers.h:
+../Core/Inc/Terminal.h:
