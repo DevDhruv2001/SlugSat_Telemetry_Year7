@@ -7,3 +7,4 @@ CC1200.c:217:9:CC1200_Read_Single_Extended_Register	6
 CC1200.c:257:9:CC1200_Command_Strobe	3
 CC1200.c:289:9:CC1200_Transmit	2
 CC1200.c:323:9:CC1200_Read_RX_FIFO	3
+CC1200.c:361:9:CC1200_Read_RSSI	1

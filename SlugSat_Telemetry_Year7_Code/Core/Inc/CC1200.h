@@ -117,4 +117,6 @@ uint8_t CC1200_Transmit(CC1200_t* SPI_Info, uint8_t* TX_Packet, uint8_t TX_Packe
   */
 uint8_t CC1200_Read_RX_FIFO(CC1200_t* SPI_Info, uint8_t* RX_Packet);
 
+int16_t CC1200_Read_RSSI(CC1200_t* SPI_Info);
+
 #endif /* INC_CC1200_H_ */

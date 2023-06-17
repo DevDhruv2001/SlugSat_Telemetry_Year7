@@ -36,6 +36,7 @@ uint8_t Register_Address;
 uint8_t Register_Value;
 uint8_t TX_Packet[127];
 uint8_t TX_Packet_Length;
+int16_t RSSI_Value;
 
 // Active Functions
 
@@ -112,6 +113,7 @@ void Receive(uint8_t* RX_Buffer, uint32_t RX_Buffer_Len)
 void Read_RX_FIFO(void)
 {
 
+	RSSI_Value = CC1200_Read_RSSI(&SPI_Info);
 	check = CC1200_Read_RX_FIFO(&SPI_Info, RX_Packet);
 
 	if (check) // check == 1
@@ -122,6 +124,8 @@ void Read_RX_FIFO(void)
 	{
 		sprintf(Message, "Received the Following Message: ");
 		sprintf(Message_Part, "%s\r\n", (char*) RX_Packet);
+		strcat(Message, Message_Part);
+		sprintf(Message_Part, "RSSI (dBm): %d\r\n", RSSI_Value);
 		strcat(Message, Message_Part);
 		CC1200_Command_Strobe(&SPI_Info, CC1200_COMMAND_SRX); // re-enter RX
 	}

@@ -7,3 +7,4 @@
 ../Core/Src/CC1200.c:257:9:CC1200_Command_Strobe	32	static
 ../Core/Src/CC1200.c:289:9:CC1200_Transmit	40	static
 ../Core/Src/CC1200.c:323:9:CC1200_Read_RX_FIFO	32	static
+../Core/Src/CC1200.c:361:9:CC1200_Read_RSSI	24	static

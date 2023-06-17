@@ -104,7 +104,7 @@ RegisterSetting_t Transmit_Register_Settings[] =
 	{CC1200_SYMBOL_RATE0,        0x07},
 	{CC1200_AGC_REF,             0x2F},
 	{CC1200_AGC_CS_THR,          0xF6},
-	{CC1200_AGC_GAIN_ADJUST,     0x00},
+	{CC1200_AGC_GAIN_ADJUST,     0xDB}, // Smart RF value 0x00 ; changed to 0xDB (-38 dBm offset observed experimentally)
 	{CC1200_AGC_CFG3,            0xB1},
 	{CC1200_AGC_CFG2,            0x20},
 	{CC1200_AGC_CFG1,            0x12},
@@ -123,7 +123,7 @@ RegisterSetting_t Transmit_Register_Settings[] =
 	{CC1200_PKT_CFG0,            0x20},
 	{CC1200_RFEND_CFG1,          0x0F},
 	{CC1200_RFEND_CFG0,          0x00},
-	{CC1200_PA_CFG1,             0x7F},
+	{CC1200_PA_CFG1,             0x7F}, // Smart RF value 0x7F (14 dBm) ; changed to 0x63 (0 dBm) for RSSI offset measurement
 	{CC1200_PA_CFG0,             0x53},
 	{CC1200_ASK_CFG,             0x0F},
 	{CC1200_PKT_LEN,             0xFF},
@@ -326,7 +326,7 @@ RegisterSetting_t Receive_Register_Settings[] =
   {CC1200_SYMBOL_RATE0,        0x07},
   {CC1200_AGC_REF,             0x29},
   {CC1200_AGC_CS_THR,          0xF6},
-  {CC1200_AGC_GAIN_ADJUST,     0x00},
+  {CC1200_AGC_GAIN_ADJUST,     0xDB}, // Smart RF value 0x00 ; changed to 0xDB (-38 dBm offset observed experimentally)
   {CC1200_AGC_CFG3,            0xB1},
   {CC1200_AGC_CFG2,            0x20},
   {CC1200_AGC_CFG1,            0x12},
@@ -345,7 +345,7 @@ RegisterSetting_t Receive_Register_Settings[] =
   {CC1200_PKT_CFG0,            0x20},
   {CC1200_RFEND_CFG1,          0x0F},
   {CC1200_RFEND_CFG0,          0x00},
-  {CC1200_PA_CFG1,             0x7F},
+  {CC1200_PA_CFG1,             0x7F}, // Smart RF value 0x7F -> 14 dbm; ; changed to 0x63 (0 dBm) for RSSI offset measurement
   {CC1200_PA_CFG0,             0x53},
   {CC1200_ASK_CFG,             0x0F},
   {CC1200_PKT_LEN,             0xFF},

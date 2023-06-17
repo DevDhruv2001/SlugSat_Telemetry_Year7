@@ -364,59 +364,11 @@ uint8_t Process_Received_Message(uint8_t* RX_Buffer, uint32_t RX_Buffer_Len)
 		Register_Access(RX_Buffer, RX_Buffer_Len);
 		Print_Message();
 	}
-//	else if (input[0] == "register")
-//	{
-//		if (input[1] == "read"){
-//			if (input[2] == "a"){//all
-//				//read_register_all()
-//			}
-//			else if (input[2] == "ext"){
-//				if (input[3] == "a"){//all
-//				//read_extended_register_all()
-//				}
-//				else{
-//					//read_extended_register()
-//				}
-//			}
-//			else{
-//				//read_register()
-//			}
-//		}
-//		else if (input[1] == "write"){
-//			if (input[2] == "ext"){
-//				//write_extended_register()
-//			}
-//			else{
-//				//write_register()
-//			}
-//		}
-//	}
-	/*else if (strncmp((char*) RX_Buffer, "print registers", strlen("print registers")) == 0)
+	else if (strncmp((char*) RX_Buffer, "command", strlen("command")) == 0)
 	{
-		Print_Registers(RX_Buffer, RX_Buffer_Len);
+		Command(RX_Buffer, RX_Buffer_Len);
 		Print_Message();
 	}
-	else if (strncmp((char*) RX_Buffer, "write register", strlen("write register")) == 0)
-	{
-		Write_Register(RX_Buffer, RX_Buffer_Len);
-		Print_Message();
-	}
-	else if (strncmp((char*) RX_Buffer, "read register", strlen("read register")) == 0)
-	{
-		Read_Register(RX_Buffer, RX_Buffer_Len);
-		Print_Message();
-	}
-	else if (strncmp((char*) RX_Buffer, "write extended register", strlen("write extended register")) == 0)
-	{
-		Write_Extended_Register(RX_Buffer, RX_Buffer_Len);
-		Print_Message();
-	}
-	else if (strncmp((char*) RX_Buffer, "read extended register", strlen("read extended register")) == 0)
-	{
-		Read_Extended_Register(RX_Buffer, RX_Buffer_Len);
-		Print_Message();
-	}
-	*/
 	else
 	{
 		CDC_Transmit_FS(RX_Buffer, RX_Buffer_Len);

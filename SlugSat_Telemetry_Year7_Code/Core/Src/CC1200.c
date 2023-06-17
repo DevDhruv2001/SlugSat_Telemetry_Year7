@@ -357,3 +357,10 @@ uint8_t CC1200_Read_RX_FIFO(CC1200_t* SPI_Info, uint8_t* RX_Packet)
 
 	return 0;
 }
+
+int16_t CC1200_Read_RSSI(CC1200_t* SPI_Info)
+{
+	CC1200_Read_Single_Extended_Register(SPI_Info, CC1200_RSSI1);
+	int16_t RSSI_MSB = (SPI_Info -> MISO_Data) [0]; // whole number component
+	return RSSI_MSB;
+}
